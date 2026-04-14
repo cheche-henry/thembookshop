@@ -1,9 +1,12 @@
 import React, { useState } from 'react';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 import Icons from '../common/Icons';
 import useCartStore from '../../store/useCartStore';
 import { CATEGORIES } from '../../data/mockProducts';
 
-export default function Navbar({ onNavigate }) {
+export default function Navbar() {
+  const navigate = useNavigate();
+  const location = useLocation();
   const cartCount = useCartStore((s) => s.getCartCount());
   const [mobileMenu, setMobileMenu] = useState(false);
   const [search, setSearch] = useState("");
@@ -11,15 +14,20 @@ export default function Navbar({ onNavigate }) {
   const handleSearch = (e) => {
     e.preventDefault();
     if (search.trim()) {
-      onNavigate?.("shop");
-      window.dispatchEvent(new CustomEvent("global-search", { detail: search }));
+      navigate('/shop', { state: { searchQuery: search } });
       setSearch("");
     }
   };
 
   const handleCategoryClick = (category) => {
-    onNavigate?.("shop");
-    // Could dispatch filter event here for future implementation
+    navigate('/shop', { state: { categoryFilter: category } });
+    setMobileMenu(false);
+  };
+
+  // Helper to check active route for styling
+  const isActive = (path) => {
+    if (path === '/') return location.pathname === '/';
+    return location.pathname.startsWith(path);
   };
 
   return (
@@ -43,11 +51,7 @@ export default function Navbar({ onNavigate }) {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           {/* Logo */}
-          <button 
-            onClick={() => onNavigate?.("home")} 
-            className="flex items-center gap-3 group"
-            aria-label="Them Bookshop Home"
-          >
+          <Link to="/" className="flex items-center gap-3 group" aria-label="Them Bookshop Home">
             <div className="bg-primary-600 text-white p-2 rounded-lg group-hover:bg-primary-700 transition-colors">
               <Icons.Book className="w-5 h-5" />
             </div>
@@ -57,22 +61,26 @@ export default function Navbar({ onNavigate }) {
               </span>
               <span className="text-[10px] text-gray-500 font-bold tracking-widest uppercase">Educational Supplies</span>
             </div>
-          </button>
+          </Link>
 
           {/* Desktop Navigation */}
           <div className="hidden lg:flex items-center gap-6 ml-8">
-            <button 
-              onClick={() => onNavigate?.("home")} 
-              className="text-sm font-bold text-gray-900 hover:text-primary-600 uppercase tracking-wide transition-colors"
+            <Link 
+              to="/" 
+              className={`text-sm font-bold uppercase tracking-wide transition-colors ${
+                isActive('/') ? 'text-primary-600' : 'text-gray-900 hover:text-primary-600'
+              }`}
             >
               Home
-            </button>
-            <button 
-              onClick={() => onNavigate?.("shop")} 
-              className="text-sm font-bold text-gray-900 hover:text-primary-600 uppercase tracking-wide transition-colors"
+            </Link>
+            <Link 
+              to="/shop" 
+              className={`text-sm font-bold uppercase tracking-wide transition-colors ${
+                isActive('/shop') ? 'text-primary-600' : 'text-gray-900 hover:text-primary-600'
+              }`}
             >
               Shop All
-            </button>
+            </Link>
             
             {/* Categories Dropdown */}
             <div className="relative group">
@@ -98,18 +106,18 @@ export default function Navbar({ onNavigate }) {
               </div>
             </div>
             
-            <button 
-              onClick={() => onNavigate?.("shop")} 
+            <Link 
+              to="/shop" 
               className="text-sm font-bold text-gray-900 hover:text-primary-600 uppercase tracking-wide transition-colors"
             >
               New Arrivals
-            </button>
-            <button 
-              onClick={() => onNavigate?.("shop")} 
+            </Link>
+            <Link 
+              to="/shop" 
               className="text-sm font-bold text-primary-600 uppercase tracking-wide transition-colors"
             >
               Offers
-            </button>
+            </Link>
           </div>
 
           {/* Right Actions */}
@@ -128,8 +136,8 @@ export default function Navbar({ onNavigate }) {
             </form>
 
             {/* Cart Button */}
-            <button 
-              onClick={() => onNavigate?.("cart")} 
+            <Link 
+              to="/cart" 
               className="relative p-2 text-gray-700 hover:text-primary-600 transition-colors"
               aria-label={`Shopping cart with ${cartCount} items`}
             >
@@ -139,7 +147,7 @@ export default function Navbar({ onNavigate }) {
                   {cartCount}
                 </span>
               )}
-            </button>
+            </Link>
 
             {/* Mobile Menu Toggle */}
             <button 
@@ -168,24 +176,33 @@ export default function Navbar({ onNavigate }) {
               />
             </form>
             <div className="flex flex-col gap-1 px-4">
-              <button 
-                onClick={() => { onNavigate?.("home"); setMobileMenu(false); }} 
-                className="text-left px-4 py-3 text-gray-900 font-bold hover:bg-gray-50 rounded-lg transition-colors"
+              <Link 
+                to="/" 
+                onClick={() => setMobileMenu(false)}
+                className={`block px-4 py-3 font-bold rounded-lg transition-colors ${
+                  isActive('/') ? 'text-primary-600 bg-gray-50' : 'text-gray-900 hover:bg-gray-50'
+                }`}
               >
                 Home
-              </button>
-              <button 
-                onClick={() => { onNavigate?.("shop"); setMobileMenu(false); }} 
-                className="text-left px-4 py-3 text-gray-900 font-bold hover:bg-gray-50 rounded-lg transition-colors"
+              </Link>
+              <Link 
+                to="/shop" 
+                onClick={() => setMobileMenu(false)}
+                className={`block px-4 py-3 font-bold rounded-lg transition-colors ${
+                  isActive('/shop') ? 'text-primary-600 bg-gray-50' : 'text-gray-900 hover:bg-gray-50'
+                }`}
               >
                 Shop All
-              </button>
-              <button 
-                onClick={() => { onNavigate?.("cart"); setMobileMenu(false); }} 
-                className="text-left px-4 py-3 text-gray-900 font-bold hover:bg-gray-50 rounded-lg transition-colors"
+              </Link>
+              <Link 
+                to="/cart" 
+                onClick={() => setMobileMenu(false)}
+                className={`block px-4 py-3 font-bold rounded-lg transition-colors ${
+                  isActive('/cart') ? 'text-primary-600 bg-gray-50' : 'text-gray-900 hover:bg-gray-50'
+                }`}
               >
                 Cart ({cartCount})
-              </button>
+              </Link>
             </div>
           </div>
         )}
@@ -204,13 +221,13 @@ export default function Navbar({ onNavigate }) {
               "Math Sets", 
               "Calculators"
             ].map((tag, i) => (
-              <button 
+              <Link 
                 key={i} 
-                onClick={() => onNavigate?.("shop")} 
+                to="/shop"
                 className="text-xs font-medium text-gray-700 hover:text-primary-600 whitespace-nowrap transition-colors"
               >
                 {tag}
-              </button>
+              </Link>
             ))}
           </div>
         </div>

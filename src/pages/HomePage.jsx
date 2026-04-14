@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import ProductCard from '../components/common/ProductCard';
 import LoadingSkeleton from '../components/common/LoadingSkeleton';
 import Icons from '../components/common/Icons';
 import { PRODUCTS } from '../data/mockProducts';
 
-export default function HomePage({ onNavigate }) {
+export default function HomePage() {
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [currentSlide, setCurrentSlide] = useState(0);
 
@@ -82,7 +84,7 @@ export default function HomePage({ onNavigate }) {
                   <h2 className="text-4xl md:text-6xl font-extrabold leading-tight">{slide.title}</h2>
                   <p className="text-lg md:text-xl text-gray-200">{slide.subtitle}</p>
                   <button 
-                    onClick={() => onNavigate?.("shop")}
+                    onClick={() => navigate('/shop')}
                     className="bg-primary-600 text-white px-8 py-3 rounded-sm font-bold uppercase tracking-wider hover:bg-primary-700 transition-colors mt-4 inline-flex items-center gap-2"
                   >
                     {slide.cta} <Icons.ChevronRight className="w-4 h-4" />
@@ -149,7 +151,7 @@ export default function HomePage({ onNavigate }) {
             ].map((cat, i) => (
               <button 
                 key={i} 
-                onClick={() => onNavigate?.("shop")} 
+                onClick={() => navigate('/shop')} 
                 className="group flex flex-col items-center"
                 aria-label={`Shop ${cat.name} category`}
               >
@@ -176,7 +178,7 @@ export default function HomePage({ onNavigate }) {
           <div className="flex justify-between items-end mb-8 border-b border-gray-200 pb-4">
             <h2 className="text-2xl font-bold text-gray-900 uppercase tracking-wide">Featured Products</h2>
             <button 
-              onClick={() => onNavigate?.("shop")} 
+              onClick={() => navigate('/shop')} 
               className="text-primary-600 font-bold text-sm hover:underline uppercase inline-flex items-center gap-1"
             >
               View All <Icons.ChevronRight className="w-4 h-4" />
@@ -184,7 +186,11 @@ export default function HomePage({ onNavigate }) {
           </div>
           <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-4 gap-6">
             {featuredProducts.map((product) => (
-              <ProductCard key={product.id} product={product} onNavigate={onNavigate} />
+              <ProductCard 
+                key={product.id} 
+                product={product} 
+                onNavigate={(page, id) => navigate(page === 'product' ? `/product/${id}` : `/${page}`)} 
+              />
             ))}
           </div>
         </div>
@@ -208,7 +214,7 @@ export default function HomePage({ onNavigate }) {
                 Prepare effectively for your exams.
               </p>
               <button 
-                onClick={() => onNavigate?.("shop")} 
+                onClick={() => navigate('/shop')} 
                 className="bg-white text-blue-900 px-8 py-3 rounded-sm font-bold uppercase tracking-wider hover:bg-gray-100 transition-colors"
               >
                 Shop Bundles
@@ -224,7 +230,7 @@ export default function HomePage({ onNavigate }) {
           <div className="flex justify-between items-end mb-8 border-b border-gray-200 pb-4">
             <h2 className="text-2xl font-bold text-gray-900 uppercase tracking-wide">Exam Revision Materials</h2>
             <button 
-              onClick={() => onNavigate?.("shop")} 
+              onClick={() => navigate('/shop')} 
               className="text-primary-600 font-bold text-sm hover:underline uppercase inline-flex items-center gap-1"
             >
               View All <Icons.ChevronRight className="w-4 h-4" />
@@ -232,7 +238,11 @@ export default function HomePage({ onNavigate }) {
           </div>
           <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-4 gap-6">
             {revisionProducts.map((product) => (
-              <ProductCard key={product.id} product={product} onNavigate={onNavigate} />
+              <ProductCard 
+                key={product.id} 
+                product={product} 
+                onNavigate={(page, id) => navigate(page === 'product' ? `/product/${id}` : `/${page}`)} 
+              />
             ))}
           </div>
         </div>
@@ -244,7 +254,7 @@ export default function HomePage({ onNavigate }) {
           <div className="flex justify-between items-end mb-8 border-b border-gray-200 pb-4">
             <h2 className="text-2xl font-bold text-gray-900 uppercase tracking-wide">New Arrivals</h2>
             <button 
-              onClick={() => onNavigate?.("shop")} 
+              onClick={() => navigate('/shop')} 
               className="text-primary-600 font-bold text-sm hover:underline uppercase inline-flex items-center gap-1"
             >
               View All <Icons.ChevronRight className="w-4 h-4" />
@@ -252,7 +262,11 @@ export default function HomePage({ onNavigate }) {
           </div>
           <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-4 gap-6">
             {newArrivals.map((product) => (
-              <ProductCard key={product.id} product={product} onNavigate={onNavigate} />
+              <ProductCard 
+                key={product.id} 
+                product={product} 
+                onNavigate={(page, id) => navigate(page === 'product' ? `/product/${id}` : `/${page}`)} 
+              />
             ))}
           </div>
         </div>

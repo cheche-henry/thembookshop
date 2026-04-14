@@ -1,10 +1,12 @@
 import React from 'react';
+import { useNavigate, Link } from 'react-router-dom';
 import { formatPrice } from '../utils/helpers';
 import Icons from '../components/common/Icons';
 import EmptyState from '../components/common/EmptyState';
 import useCartStore from '../store/useCartStore';
 
-export default function CartPage({ onNavigate }) {
+export default function CartPage() {
+  const navigate = useNavigate();
   const cart = useCartStore((s) => s.cart);
   const updateQuantity = useCartStore((s) => s.updateQuantity);
   const removeFromCart = useCartStore((s) => s.removeFromCart);
@@ -18,7 +20,7 @@ export default function CartPage({ onNavigate }) {
         <EmptyState 
           message="Your cart is empty" 
           subtext="Looks like you haven't added anything yet." 
-          action={() => onNavigate?.("shop")} 
+          action={() => navigate('/shop')} 
           actionLabel="Start Shopping" 
         />
       </div>
@@ -128,7 +130,7 @@ export default function CartPage({ onNavigate }) {
               </div>
             </div>
             <button 
-              onClick={() => onNavigate?.("checkout")} 
+              onClick={() => navigate('/checkout')} 
               className="w-full bg-primary-600 text-white py-4 rounded-sm font-bold uppercase tracking-wider hover:bg-primary-700 transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-2"
             >
               Proceed to Checkout <Icons.ChevronRight className="w-4 h-4" />
@@ -139,7 +141,7 @@ export default function CartPage({ onNavigate }) {
                <div className="bg-gray-100 px-2 py-1 rounded text-[10px] font-bold text-orange-600">MASTERCARD</div>
             </div>
             <button 
-              onClick={() => onNavigate?.("shop")}
+              onClick={() => navigate('/shop')}
               className="w-full mt-4 text-primary-600 font-medium py-2 hover:text-primary-700 transition-colors text-sm"
             >
               ← Continue Shopping

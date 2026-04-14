@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
 import { formatPrice, generateSKU } from '../utils/helpers';
 import Icons from '../components/common/Icons';
 import ProductCard from '../components/common/ProductCard';
@@ -6,7 +7,8 @@ import EmptyState from '../components/common/EmptyState';
 import useCartStore from '../store/useCartStore';
 import { PRODUCTS } from '../data/mockProducts';
 
-export default function ProductDetailPage({ productId, onNavigate }) {
+export default function ProductDetailPage({ productId }) {
+  const navigate = useNavigate();
   const addToCart = useCartStore((s) => s.addToCart);
   const [quantity, setQuantity] = useState(1);
   const [added, setAdded] = useState(false);
@@ -19,7 +21,7 @@ export default function ProductDetailPage({ productId, onNavigate }) {
         <EmptyState 
           message="Product not found" 
           subtext="The product you're looking for doesn't exist." 
-          action={() => onNavigate?.("shop")} 
+          action={() => navigate('/shop')} 
           actionLabel="Back to Shop" 
         />
       </div>
@@ -42,9 +44,9 @@ export default function ProductDetailPage({ productId, onNavigate }) {
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 bg-white min-h-screen">
       {/* Breadcrumb */}
       <nav className="flex items-center gap-2 text-xs text-gray-500 mb-6 uppercase tracking-wide" aria-label="Breadcrumb">
-        <button onClick={() => onNavigate?.("home")} className="hover:text-primary-600 transition-colors">Home</button>
+        <Link to="/" className="hover:text-primary-600 transition-colors">Home</Link>
         <Icons.ChevronRight className="w-3 h-3" />
-        <button onClick={() => onNavigate?.("shop")} className="hover:text-primary-600 transition-colors">Shop</button>
+        <Link to="/shop" className="hover:text-primary-600 transition-colors">Shop</Link>
         <Icons.ChevronRight className="w-3 h-3" />
         <span className="text-gray-900 font-bold truncate" aria-current="page">{product.name}</span>
       </nav>
@@ -172,7 +174,11 @@ export default function ProductDetailPage({ productId, onNavigate }) {
           </h2>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
             {relatedProducts.map((p) => (
-              <ProductCard key={p.id} product={p} onNavigate={onNavigate} />
+              <ProductCard 
+                key={p.id} 
+                product={p} 
+                onNavigate={(page, id) => navigate(page === 'product' ? `/product/${id}` : `/${page}`)} 
+              />
             ))}
           </div>
         </div>

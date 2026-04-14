@@ -1,27 +1,33 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 import ProductCard from '../components/common/ProductCard';
 import LoadingSkeleton from '../components/common/LoadingSkeleton';
 import EmptyState from '../components/common/EmptyState';
 import Icons from '../components/common/Icons';
 import { PRODUCTS, CATEGORIES, CLASS_LEVELS, SUBJECTS } from '../data/mockProducts';
 
-export default function ShopPage({ onNavigate }) {
+export default function ShopPage() {
+  const navigate = useNavigate();
+  const location = useLocation();
   const [search, setSearch] = useState("");
   const [filters, setFilters] = useState({ category: "", classLevel: "", subject: "" });
   const [showFilters, setShowFilters] = useState(false);
   const [loading, setLoading] = useState(true);
 
+  // Initialize search from location state or URL params
+  useEffect(() => {
+    if (location.state?.searchQuery) {
+      setSearch(location.state.searchQuery);
+    }
+    if (location.state?.categoryFilter) {
+      setFilters(prev => ({ ...prev, category: location.state.categoryFilter }));
+    }
+  }, [location.state]);
+
   // Simulate loading
   useEffect(() => {
     const timer = setTimeout(() => setLoading(false), 600);
     return () => clearTimeout(timer);
-  }, []);
-
-  // Listen for global search events from Navbar
-  useEffect(() => {
-    const handler = (e) => setSearch(e.detail || "");
-    window.addEventListener("global-search", handler);
-    return () => window.removeEventListener("global-search", handler);
   }, []);
 
   // Filter products based on search and filters
@@ -41,10 +47,8 @@ export default function ShopPage({ onNavigate }) {
     });
   }, [search, filters]);
 
-  // Filter sidebar component
   const FilterSidebar = () => (
     <div className="space-y-6">
-      {/* Category Filter */}
       <div>
         <h3 className="font-bold text-gray-900 mb-3 uppercase text-sm tracking-wide border-b border-gray-200 pb-2">
           Category
@@ -79,7 +83,6 @@ export default function ShopPage({ onNavigate }) {
         </div>
       </div>
 
-      {/* Class Level Filter */}
       <div className="border-t border-gray-200 pt-6">
         <h3 className="font-bold text-gray-900 mb-3 uppercase text-sm tracking-wide border-b border-gray-200 pb-2">
           Class Level
@@ -114,7 +117,6 @@ export default function ShopPage({ onNavigate }) {
         </div>
       </div>
 
-      {/* Subject Filter */}
       <div className="border-t border-gray-200 pt-6">
         <h3 className="font-bold text-gray-900 mb-3 uppercase text-sm tracking-wide border-b border-gray-200 pb-2">
           Subject
@@ -149,7 +151,6 @@ export default function ShopPage({ onNavigate }) {
         </div>
       </div>
 
-      {/* Clear Filters */}
       <button 
         onClick={() => setFilters({ category: "", classLevel: "", subject: "" })} 
         className="w-full text-sm text-primary-600 font-bold uppercase hover:underline"
@@ -163,13 +164,7 @@ export default function ShopPage({ onNavigate }) {
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 bg-gray-50 min-h-screen">
       {/* Breadcrumb */}
       <nav className="flex items-center gap-2 text-xs text-gray-500 mb-6 uppercase tracking-wide" aria-label="Breadcrumb">
-        <button 
-          onClick={() => onNavigate?.("home")} 
-          className="hover:text-primary-600 transition-colors"
-          aria-label="Go to home"
-        >
-          Home
-        </button>
+        <Link to="/" className="hover:text-primary-600 transition-colors">Home</Link>
         <Icons.ChevronRight className="w-3 h-3" />
         <span className="text-gray-900 font-bold" aria-current="page">Shop</span>
       </nav>
@@ -267,7 +262,11 @@ export default function ShopPage({ onNavigate }) {
           ) : (
             <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-6">
               {filteredProducts.map((product) => (
-                <ProductCard key={product.id} product={product} onNavigate={onNavigate} />
+                <ProductCard 
+                  key={product.id} 
+                  product={product} 
+                  onNavigate={(page, id) => navigate(page === 'product' ? `/product/${id}` : `/${page}`)} 
+                />
               ))}
             </div>
           )}

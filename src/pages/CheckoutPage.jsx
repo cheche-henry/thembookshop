@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { formatPrice, validatePhone } from '../utils/helpers';
 import Icons from '../components/common/Icons';
 import EmptyState from '../components/common/EmptyState';
 import useCartStore from '../store/useCartStore';
 
-export default function CheckoutPage({ onNavigate }) {
+export default function CheckoutPage() {
+  const navigate = useNavigate();
   const cart = useCartStore((s) => s.cart);
   const getCartTotal = useCartStore((s) => s.getCartTotal);
   const clearCart = useCartStore((s) => s.clearCart);
@@ -22,7 +24,7 @@ export default function CheckoutPage({ onNavigate }) {
         <EmptyState 
           message="Your cart is empty" 
           subtext="Add some items before checkout." 
-          action={() => onNavigate?.("shop")} 
+          action={() => navigate('/shop')} 
           actionLabel="Shop Now" 
         />
       </div>
@@ -81,7 +83,7 @@ export default function CheckoutPage({ onNavigate }) {
           </div>
           <div className="space-y-3">
             <button 
-              onClick={() => onNavigate?.("shop")} 
+              onClick={() => navigate('/shop')} 
               className="bg-primary-600 text-white px-8 py-3 rounded-sm font-bold uppercase tracking-wider hover:bg-primary-700 transition-colors w-full"
             >
               Continue Shopping

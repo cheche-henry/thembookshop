@@ -1,3 +1,67 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Custom scrollbar for filter sidebar */
+.custom-scrollbar::-webkit-scrollbar { 
+  width: 4px; 
+}
+.custom-scrollbar::-webkit-scrollbar-track { 
+  background: transparent; 
+}
+.custom-scrollbar::-webkit-scrollbar-thumb { 
+  background: #cbd5e1; 
+  border-radius: 2px; 
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover { 
+  background: #94a3b8; 
+}
+
+/* Hide scrollbar for horizontal scroll areas */
+.no-scrollbar::-webkit-scrollbar { 
+  display: none; 
+}
+.no-scrollbar { 
+  -ms-overflow-style: none; 
+  scrollbar-width: none; 
+}
+
+/* Smooth scrolling */
+html { 
+  scroll-behavior: smooth; 
+}
+
+/* Base styles */
+body {
+  @apply bg-white text-gray-900 antialiased;
+}
+
+/* Line clamp utility for multi-line truncation */
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Focus styles for accessibility */
+button:focus-visible,
+input:focus-visible,
+a:focus-visible {
+  @apply outline-none ring-2 ring-primary-500 ring-offset-2;
+}
+
+/* Image loading optimization */
+img {
+  @apply max-w-full h-auto;
+}
+
+/* ✅ Fixed: Use a different class name for custom transition defaults */
+.transition-default {
+  @apply transition-all duration-200 ease-in-out;
+}
+
+/* Optional: Add hover scale utility if needed */
+.hover-scale {
+  @apply hover:scale-105 transition-transform duration-200;
+}

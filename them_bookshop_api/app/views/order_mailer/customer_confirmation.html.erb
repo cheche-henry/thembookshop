@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+  <body style="font-family: Arial, sans-serif; line-height: 1.6;">
+    <h2>Thank you for your order, <%= @order.name %> 🎉</h2>
+
+    <p>We have received your order successfully.</p>
+
+    <h3>Order Details:</h3>
+
+    <ul>
+      <li><strong>Order ID:</strong> <%= @order.id %></li>
+      <li><strong>Phone:</strong> <%= @order.phone_number %></li>
+      <li><strong>Delivery Address:</strong> <%= @order.delivery_address %></li>
+      <li><strong>Total Amount:</strong> KES <%= @order.total_amount %></li>
+      <li><strong>Status:</strong> <%= @order.status %></li>
+    </ul>
+
+    <p>
+      We will notify you once your order is processed and payment is confirmed via M-Pesa.
+    </p>
+
+    <p>— Them Bookshop Team 📚</p>
+  </body>
+</html>

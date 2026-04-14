@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+  <body style="font-family: Arial, sans-serif; line-height: 1.6;">
+    <h2>🛒 New Order Received</h2>
+
+    <p>A new customer order has been placed.</p>
+
+    <h3>Customer Details:</h3>
+
+    <ul>
+      <li><strong>Name:</strong> <%= @order.name %></li>
+      <li><strong>Phone:</strong> <%= @order.phone_number %></li>
+      <li><strong>Email:</strong> <%= @order.email %></li>
+    </ul>
+
+    <h3>Order Info:</h3>
+
+    <ul>
+      <li><strong>Order ID:</strong> <%= @order.id %></li>
+      <li><strong>Total Amount:</strong> KES <%= @order.total_amount %></li>
+      <li><strong>Delivery Address:</strong> <%= @order.delivery_address %></li>
+      <li><strong>Status:</strong> <%= @order.status %></li>
+    </ul>
+
+    <p>
+      Please log into the admin dashboard to process this order.
+    </p>
+
+    <p>— System Notification 🤖</p>
+  </body>
+</html>

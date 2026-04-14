@@ -28,5 +28,8 @@ module ThemBookshopApi
     # Middleware like session, flash, cookies can be added back manually.
     # Skip views, helpers and assets when generating a new resource.
     config.api_only = true
+
+    config.active_storage.service = :local
+    config.action_controller.default_url_options = { host: ENV.fetch('APP_HOST', 'localhost'), port: 3000 }
   end
 end

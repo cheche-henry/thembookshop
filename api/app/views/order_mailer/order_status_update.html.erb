@@ -1,0 +1,16 @@
+<h2 style="color:#1f7d4f;margin-top:0">Order Update 📦</h2>
+<p>Hi <strong><%= @order.customer_name %></strong>, your order status has been updated.</p>
+
+<div style="background:#f0faf4;border-radius:8px;padding:16px 20px;margin:20px 0;">
+  <strong>Order Reference:</strong> <%= @order.reference %><br/>
+  <strong>New Status:</strong>
+  <span class="badge badge-<%= @order.status %>"><%= @order.status.humanize %></span>
+</div>
+
+<% if @order.status == "completed" %>
+<p>🎉 Your order has been delivered. Thank you for shopping with Them Bookshop!</p>
+<% elsif @order.status == "processing" %>
+<p>Your order is packed and on its way to you!</p>
+<% end %>
+
+<p style="font-size:13px;color:#6b7280;">Questions? Call us on <strong>+254 700 000 000</strong> or reply to this email.</p>

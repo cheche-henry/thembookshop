@@ -1,0 +1,14 @@
+:concurrency: 5
+:queues:
+  - [critical, 3]
+  - [mailers, 2]
+  - [payments, 2]
+  - [default, 1]
+
+:scheduler:
+  :schedule:
+    # Check for stuck payment_initiated orders every 30 mins
+    cleanup_stuck_payments:
+      cron: "*/30 * * * *"
+      class: "CleanupStuckPaymentsJob"
+      queue: payments

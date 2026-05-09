@@ -1,0 +1,13 @@
+<h2 style="color:#1f7d4f;margin-top:0">Payment Received ✅</h2>
+<p>Hi <strong><%= @order.customer_name %></strong>, your payment has been confirmed!</p>
+
+<div style="background:#d1fae5;border-radius:8px;padding:16px 20px;margin:20px 0;border-left:4px solid #2a9d64;">
+  <strong>Order:</strong> <%= @order.reference %><br/>
+  <strong>Amount Paid:</strong> KES <%= @order.total_amount.to_i.to_s(:delimited) %><br/>
+  <% if @payment&.mpesa_receipt_number.present? %>
+  <strong>M-Pesa Receipt:</strong> <%= @payment.mpesa_receipt_number %><br/>
+  <% end %>
+  <strong>Status:</strong> <span class="badge badge-paid">Paid</span>
+</div>
+
+<p>We are now preparing your order for delivery. You'll receive another update once it's on its way. Thank you for shopping with Them Bookshop! 📚</p>

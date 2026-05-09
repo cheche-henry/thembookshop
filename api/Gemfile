@@ -1,0 +1,60 @@
+source "https://rubygems.org"
+git_source(:github) { |repo| "https://github.com/#{repo}.git" }
+
+ruby "3.2.2"
+
+gem "rails", "~> 7.1.0"
+gem "pg", "~> 1.1"
+gem "puma", "~> 6.0"
+
+# Auth
+gem "jwt", "~> 2.7"
+gem "bcrypt", "~> 3.1.7"
+
+# Active Storage
+gem "aws-sdk-s3", require: false   # swap for local storage in dev
+gem "image_processing", "~> 1.2"
+
+# Background jobs
+gem "sidekiq", "~> 7.2"
+gem "sidekiq-scheduler", "~> 5.0"
+
+# HTTP client (M-Pesa)
+gem "faraday", "~> 2.7"
+gem "faraday-retry", "~> 2.2"
+
+# Serialization
+gem "blueprinter", "~> 1.0"
+
+# Rack
+gem "rack-cors", "~> 2.0"
+
+# Pagination
+gem "kaminari", "~> 1.2"
+
+# Env
+gem "dotenv-rails", "~> 3.0"
+
+# Monitoring
+gem "sentry-ruby", "~> 5.15"
+gem "sentry-rails", "~> 5.15"
+gem "sentry-sidekiq", "~> 5.15"
+
+group :development, :test do
+  gem "rspec-rails", "~> 6.1"
+  gem "factory_bot_rails"
+  gem "faker"
+  gem "debug", platforms: %i[mri mingw x64_mingw]
+  gem "bullet"
+end
+
+group :development do
+  gem "annotate"
+  gem "rubocop-rails", require: false
+end
+
+group :test do
+  gem "shoulda-matchers"
+  gem "webmock"
+  gem "vcr"
+end

@@ -1,0 +1,21 @@
+default: &default
+  adapter: postgresql
+  encoding: unicode
+  pool: <%= ENV.fetch("RAILS_MAX_THREADS") { 5 } %>
+  username: <%= ENV["DB_USERNAME"] %>
+  password: <%= ENV["DB_PASSWORD"] %>
+  host: <%= ENV.fetch("DB_HOST") { "localhost" } %>
+  port: <%= ENV.fetch("DB_PORT") { 5432 } %>
+
+development:
+  <<: *default
+  database: them_bookshop_development
+
+test:
+  <<: *default
+  database: them_bookshop_test
+
+production:
+  <<: *default
+  database: them_bookshop_production
+  url: <%= ENV["DATABASE_URL"] %>

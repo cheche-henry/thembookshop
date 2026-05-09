@@ -1,0 +1,28 @@
+<h2 style="color:#1f7d4f;margin-top:0">🛒 New Order Received</h2>
+<p>A new order has been placed and requires your attention.</p>
+
+<div style="background:#f0faf4;border-radius:8px;padding:16px 20px;margin:20px 0;">
+  <strong>Reference:</strong> <code><%= @order.reference %></code><br/>
+  <strong>Customer:</strong> <%= @order.customer_name %><br/>
+  <strong>Phone:</strong> <%= @order.customer_phone %><br/>
+  <strong>Email:</strong> <%= @order.customer_email.presence || "Not provided" %><br/>
+  <strong>Total:</strong> KES <%= @order.total_amount.to_i.to_s(:delimited) %><br/>
+  <strong>Delivery to:</strong> <%= @order.delivery_address %>
+</div>
+
+<h3>Items Ordered</h3>
+<table class="items">
+  <thead><tr><th>Product</th><th>Qty</th><th>Unit Price</th><th>Total</th></tr></thead>
+  <tbody>
+    <% @order_items.each do |item| %>
+    <tr>
+      <td><%= item.product_name_snapshot %></td>
+      <td><%= item.quantity %></td>
+      <td>KES <%= item.unit_price.to_i %></td>
+      <td>KES <%= item.total_price.to_i %></td>
+    </tr>
+    <% end %>
+  </tbody>
+</table>
+
+<a href="<%= @admin_url %>/orders/<%= @order.id %>" class="btn">View Order in Dashboard →</a>

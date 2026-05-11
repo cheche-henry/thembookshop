@@ -6,7 +6,7 @@
   <strong>Customer:</strong> <%= @order.customer_name %><br/>
   <strong>Phone:</strong> <%= @order.customer_phone %><br/>
   <strong>Email:</strong> <%= @order.customer_email.presence || "Not provided" %><br/>
-  <strong>Total:</strong> KES <%= @order.total_amount.to_i.to_s(:delimited) %><br/>
+  <strong>Total:</strong> KES <%= @order.total_amount.to_i %><br/>
   <strong>Delivery to:</strong> <%= @order.delivery_address %>
 </div>
 

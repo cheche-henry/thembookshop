@@ -1,17 +1,73 @@
-import { useState, useMemo } from 'react'
-import { products } from '../data/products'
-export function useFilters() {
-  const [search, setSearch] = useState('')
-  const [category, setCategory] = useState('all')
+import { useState, useEffect, useCallback, useRef } from 'react'
+
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3000'
+
+export function useFilters(initialSearch = '', initialCategory = 'all') {
+  const [search, setSearch]         = useState(initialSearch)
+  const [category, setCategory]     = useState(initialCategory)
   const [classLevel, setClassLevel] = useState('all')
-  const [subject, setSubject] = useState('all')
-  const filtered = useMemo(() => products.filter((p) => {
-    const matchSearch = !search || p.name.toLowerCase().includes(search.toLowerCase()) || p.category.toLowerCase().includes(search.toLowerCase()) || (p.subject && p.subject.toLowerCase().includes(search.toLowerCase()))
-    const matchCategory = category === 'all' || p.category === category
-    const matchLevel = classLevel === 'all' || p.classLevel === classLevel
-    const matchSubject = subject === 'all' || p.subject === subject
-    return matchSearch && matchCategory && matchLevel && matchSubject
-  }), [search, category, classLevel, subject])
-  const reset = () => { setSearch(''); setCategory('all'); setClassLevel('all'); setSubject('all') }
-  return { search, setSearch, category, setCategory, classLevel, setClassLevel, subject, setSubject, filtered, reset, hasFilters: category !== 'all' || classLevel !== 'all' || subject !== 'all' || search !== '' }
+  const [subject, setSubject]       = useState('all')
+  const [products, setProducts]     = useState([])
+  const [loading, setLoading]       = useState(true)
+  const [error, setError]           = useState(null)
+  const [meta, setMeta]             = useState(null)
+  const [page, setPage]             = useState(1)
+
+  const debounceRef = useRef(null)
+
+  const fetchProducts = useCallback(async (params) => {
+    setLoading(true)
+    setError(null)
+    try {
+      const query = new URLSearchParams()
+      if (params.q)                                       query.set('q', params.q)
+      if (params.category && params.category !== 'all')   query.set('category', params.category)
+      if (params.classLevel && params.classLevel !== 'all') query.set('class_level', params.classLevel)
+      if (params.subject && params.subject !== 'all')     query.set('subject', params.subject)
+      if (params.page)                                    query.set('page', params.page)
+      query.set('per_page', '24')
+
+      const res  = await fetch(`${API_BASE}/api/v1/products?${query}`)
+      const data = await res.json()
+      setProducts(data.data || [])
+      setMeta(data.meta || null)
+    } catch (e) {
+      setError('Could not load products. Is the API running?')
+      console.error(e)
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    clearTimeout(debounceRef.current)
+    // Debounce search typing (350ms), but apply filter changes instantly
+    const delay = debounceRef.current !== null && search !== '' ? 350 : 0
+    debounceRef.current = setTimeout(() => {
+      fetchProducts({ q: search, category, classLevel, subject, page })
+    }, delay)
+    return () => clearTimeout(debounceRef.current)
+  }, [search, category, classLevel, subject, page])
+
+  const reset = () => {
+    setSearch('')
+    setCategory('all')
+    setClassLevel('all')
+    setSubject('all')
+    setPage(1)
+  }
+
+  return {
+    search, setSearch,
+    category, setCategory,
+    classLevel, setClassLevel,
+    subject, setSubject,
+    products,
+    loading,
+    error,
+    meta,
+    page, setPage,
+    reset,
+    hasFilters: category !== 'all' || classLevel !== 'all' || subject !== 'all' || search !== '',
+  }
 }

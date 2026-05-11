@@ -16,8 +16,7 @@ gem "aws-sdk-s3", require: false   # swap for local storage in dev
 gem "image_processing", "~> 1.2"
 
 # Background jobs
-gem "sidekiq", "~> 7.2"
-gem "sidekiq-scheduler", "~> 5.0"
+gem "sidekiq", "7.2.4"
 
 # HTTP client (M-Pesa)
 gem "faraday", "~> 2.7"

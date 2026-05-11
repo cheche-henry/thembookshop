@@ -10,9 +10,7 @@ class OrderBlueprint < Blueprinter::Base
   association :payments,    blueprint: PaymentBlueprint
 
   view :list do
-    excludes :notes, :delivery_location
-    exclude_association :order_items
-    exclude_association :payments
-    fields :reference, :customer_name, :customer_phone, :total_amount, :status, :created_at
+    fields :id, :reference, :customer_name, :customer_phone,
+           :customer_email, :total_amount, :status, :created_at
   end
 end

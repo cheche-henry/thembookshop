@@ -17,7 +17,7 @@
     <tr>
       <td><%= item.product_name_snapshot %></td>
       <td><%= item.quantity %></td>
-      <td>KES <%= item.total_price.to_i.to_s(:delimited) %></td>
+      <td>KES <%= item.total_price.to_i %></td>
     </tr>
     <% end %>
     <tr><td colspan="2">Delivery</td><td><%=  @order.delivery_fee.zero? ? "FREE" : "KES #{@order.delivery_fee.to_i}" %></td></tr>
@@ -25,7 +25,7 @@
   <tfoot>
     <tr class="total-row">
       <td colspan="2">Total</td>
-      <td>KES <%= @order.total_amount.to_i.to_s(:delimited) %></td>
+      <td>KES <%= @order.total_amount.to_i %></td>
     </tr>
   </tfoot>
 </table>

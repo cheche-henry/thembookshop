@@ -3,7 +3,7 @@
 
 <div style="background:#d1fae5;border-radius:8px;padding:16px 20px;margin:20px 0;border-left:4px solid #2a9d64;">
   <strong>Order:</strong> <%= @order.reference %><br/>
-  <strong>Amount Paid:</strong> KES <%= @order.total_amount.to_i.to_s(:delimited) %><br/>
+  <strong>Amount Paid:</strong> KES <%= @order.total_amount.to_i %><br/>
   <% if @payment&.mpesa_receipt_number.present? %>
   <strong>M-Pesa Receipt:</strong> <%= @payment.mpesa_receipt_number %><br/>
   <% end %>

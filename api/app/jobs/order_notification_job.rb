@@ -11,16 +11,13 @@ class OrderNotificationJob < ApplicationJob
 
     case event
     when "order_placed"
-      # Confirmation to customer (only if email provided)
+      # Only fires after payment is confirmed
       OrderMailer.order_confirmation(order).deliver_now if order.customer_email.present?
-      # Alert to admin (always)
       OrderMailer.new_order_admin_alert(order).deliver_now
     when "payment_received"
       OrderMailer.payment_received(order).deliver_now if order.customer_email.present?
     when "order_status_update"
       OrderMailer.order_status_update(order).deliver_now if order.customer_email.present?
-    else
-      Rails.logger.warn "[OrderNotificationJob] Unknown event: #{event}"
     end
   rescue ActiveRecord::RecordNotFound
     Rails.logger.error "[OrderNotificationJob] Order ##{order_id} not found"

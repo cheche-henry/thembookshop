@@ -5,24 +5,22 @@ module Api
       # Creates order, deducts stock, sends emails, initiates M-Pesa STK push
       def create
         result = OrderCreator.call(
-          order_params:  permitted_order_params,
-          items_params:  permitted_items_params,
+          order_params: permitted_order_params,
+          items_params: permitted_items_params,
         )
 
         if result.success?
           order = result.order
-          # Fire emails in background
-          OrderNotificationJob.perform_later(order.id, "order_placed")
-          # Initiate M-Pesa STK Push
+          # ⛔ No emails here — wait for payment confirmation
           mpesa_result = initiate_mpesa_payment(order)
 
           render_created(
             {
-              order:      OrderBlueprint.render_as_hash(order),
-              mpesa_sent: mpesa_result[:success],
+              order:         OrderBlueprint.render_as_hash(order),
+              mpesa_sent:    mpesa_result[:success],
               mpesa_message: mpesa_result[:message],
             },
-            message: "Order placed successfully. Check your phone for M-Pesa prompt."
+            message: "Order created. Complete M-Pesa payment to confirm."
           )
         else
           render_error(result.errors.first, status: :unprocessable_entity, errors: result.errors)

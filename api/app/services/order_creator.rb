@@ -1,27 +1,17 @@
-# OrderCreator — orchestrates the full order placement flow
-#
-# Usage:
-#   result = OrderCreator.call(order_params:, items_params:)
-#   if result.success?
-#     result.order   # => Order instance
-#   else
-#     result.errors  # => ["Insufficient stock for KLB Math Grade 4"]
-#   end
-
 class OrderCreator
   Result = Struct.new(:success?, :order, :errors, keyword_init: true)
 
-  DELIVERY_THRESHOLD = 2000  # KES — free delivery above this
-  DELIVERY_FEE       = 200   # KES
+  # No delivery fee for now — free delivery on all orders
+  DELIVERY_FEE = 0
 
   def self.call(order_params:, items_params:)
     new(order_params:, items_params:).call
   end
 
   def initialize(order_params:, items_params:)
-    @order_params  = order_params.to_h.symbolize_keys
-    @items_params  = items_params
-    @errors        = []
+    @order_params = order_params.to_h.symbolize_keys
+    @items_params = items_params
+    @errors       = []
   end
 
   def call
@@ -31,7 +21,6 @@ class OrderCreator
       deduct_stock!
       @order.save!
     end
-
     Result.new(success?: true, order: @order, errors: [])
   rescue ActiveRecord::RecordInvalid => e
     Result.new(success?: false, order: nil, errors: [e.message])
@@ -57,15 +46,13 @@ class OrderCreator
   end
 
   def build_order
-    subtotal     = @resolved_items.sum { |i| i[:product].price * i[:quantity] }
-    delivery_fee = subtotal >= DELIVERY_THRESHOLD ? 0 : DELIVERY_FEE
-    total        = subtotal + delivery_fee
+    subtotal = @resolved_items.sum { |i| i[:product].price * i[:quantity] }
 
     @order = Order.new(
       **@order_params,
       subtotal:     subtotal,
-      delivery_fee: delivery_fee,
-      total_amount: total,
+      delivery_fee: DELIVERY_FEE,
+      total_amount: subtotal + DELIVERY_FEE,
       status:       "pending",
     )
 

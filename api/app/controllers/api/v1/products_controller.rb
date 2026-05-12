@@ -6,6 +6,7 @@ module Api
       # GET /api/v1/products
       def index
         products = Product.active
+                          .with_attached_image
                           .by_category(params[:category])
                           .by_level(params[:class_level])
                           .by_subject(params[:subject])
@@ -28,7 +29,7 @@ module Api
       private
 
       def set_product
-        @product = Product.active.find(params[:id])
+        @product = Product.active.with_attached_image.find(params[:id])
       end
     end
   end

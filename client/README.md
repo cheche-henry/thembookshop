@@ -1,161 +1,98 @@
-# 📚 Them Bookshop
+# Them Bookshop — Client
 
-Kenya's trusted school supply e-commerce store — a fully responsive React frontend for browsing and purchasing primary & secondary school learning materials.
+React SPA for Kenya's school supply e-commerce store. Built with Vite, Tailwind CSS, and Zustand.
 
----
+## Prerequisites
 
-## 🚀 Getting Started
+- Node.js 18+, npm
 
-### Prerequisites
-- Node.js 18+ and npm
-
-### Installation & Running
+## Setup
 
 ```bash
-# 1. Unzip the project folder
-cd them-bookshop
-
-# 2. Install dependencies
 npm install
-
-# 3. Start the development server
-npm run dev
-
-# 4. Open in browser
-# → http://localhost:5173
+cp .env.example .env
 ```
 
-### Build for Production
+### Environment Variables
+
+| Variable | Default | Purpose |
+|---|---|---|
+| `VITE_API_URL` | `http://localhost:3000` | Rails API base URL |
+
+## Running
+
 ```bash
-npm run build
-npm run preview
+npm run dev          # dev server → http://localhost:5173
+npm run build        # production build → dist/
+npm run preview      # preview production build
 ```
 
----
-
-## 📁 Project Structure
+## Project Structure
 
 ```
 src/
-├── components/         # Reusable UI components
-│   ├── Navbar.jsx         – Sticky header with search + cart
-│   ├── Footer.jsx         – Links, contact, categories
-│   ├── ProductCard.jsx    – Product grid card
-│   ├── CartItem.jsx       – Cart line item with qty controls
-│   ├── FilterSidebar.jsx  – Category / class / subject filters
-│   ├── SkeletonCard.jsx   – Loading skeleton animation
-│   └── EmptyState.jsx     – Empty cart / no results states
-│
-├── pages/              # Full page components (routed)
-│   ├── HomePage.jsx       – Hero, categories, featured products
-│   ├── ShopPage.jsx       – Product grid + search + filters
-│   ├── ProductDetailPage.jsx – Single product view
-│   ├── CartPage.jsx       – Cart items + order summary
-│   └── CheckoutPage.jsx   – Customer form + M-Pesa UI
-│
+├── admin/               # Admin panel (JWT-protected)
+│   ├── components/      #  AdminLayout, AdminTable, StatusBadge, etc.
+│   ├── pages/           #  Dashboard, Orders, Products, Settings, Login
+│   ├── context/         #  authStore (Zustand + localStorage)
+│   ├── hooks/           #  useApi, useMutation
+│   └── utils/           #  api client (auto-attaches JWT)
+├── components/          # Reusable UI
+│   ├── Navbar.jsx       #  Sticky header, search, cart badge
+│   ├── Footer.jsx       #  Links, contact, categories
+│   ├── ProductCard.jsx  #  Product grid card with image fallback
+│   ├── CartItem.jsx     #  Cart line with quantity stepper
+│   ├── FilterSidebar.jsx # Category / class / subject filters
+│   ├── Field.jsx        #  Form field wrapper with validation
+│   ├── ErrorBoundary.jsx # React error boundary
+│   ├── SkeletonCard.jsx #  Loading skeleton
+│   └── EmptyState.jsx   #  Empty search / cart states
+├── pages/               # Route-level pages
+│   ├── HomePage.jsx     #  Hero, categories, featured products
+│   ├── ShopPage.jsx     #  Product grid + filters + pagination
+│   ├── ProductDetailPage.jsx # Full product view + related items
+│   ├── CartPage.jsx     #  Cart with order summary
+│   ├── CheckoutPage.jsx #  Customer form + M-Pesa payment flow
+│   └── NotFoundPage.jsx #  404 page
 ├── context/
-│   └── cartStore.js       – Zustand cart store (persisted to localStorage)
-│
+│   └── cartStore.js     # Zustand cart (persisted to localStorage)
 ├── hooks/
-│   └── useFilters.js      – Filter/search logic with useMemo
-│
-├── utils/
-│   └── format.js          – KES formatter, badge colour helpers
-│
-├── data/
-│   └── products.js        – 30 mock products + filter option arrays
-│
-├── App.jsx             – Router setup, scroll-to-top
-├── main.jsx            – React entry point
-└── index.css           – Tailwind base + custom utility classes
+│   └── useFilters.js    # Debounced search + filter state
+└── utils/
+    └── format.js        # KES formatter, badge colour helpers
 ```
 
----
-
-## 🎨 Design Decisions
-
-| Choice | Reason |
-|---|---|
-| **Nunito** (display) + **DM Sans** (body) | Friendly, readable, educational feel |
-| **Green + Sky Blue** palette | Fresh, trustworthy, school-appropriate |
-| **Zustand** for cart | Lightweight, easy localStorage persistence |
-| **Mobile-first** layout | Most Kenyan parents browse on phones |
-| **Filter chips** (active filters shown) | Clear UX for non-technical users |
-| **Skeleton loaders** | Smooth perceived performance |
-
----
-
-## 🔌 Where to Add Backend Integration
-
-### 1. Product Data (`src/data/products.js`)
-Replace the exported `products` array with an API call:
-```js
-// TODO: Replace with:
-const { data: products } = await fetch('/api/products').then(r => r.json())
-```
-
-### 2. Cart Store (`src/context/cartStore.js`)
-When a user account system is ready, sync cart to the backend on add/remove.
-
-### 3. Checkout (`src/pages/CheckoutPage.jsx`)
-Look for the comment `// TODO: Call M-Pesa STK Push API here` and integrate:
-- **Safaricom Daraja API** — STK Push (`/mpesa/stkpush/v1/processrequest`)
-- Your Node.js/Django/Laravel backend handles the OAuth token + callback
-
-```js
-// TODO: Replace fake submit with:
-const res = await fetch('/api/orders', {
-  method: 'POST',
-  body: JSON.stringify({ items, customer: form, total }),
-})
-const { orderId, mpesaPromptSent } = await res.json()
-```
-
-### 4. Images
-Replace `images.unsplash.com` URLs with your own product images hosted on Cloudinary, S3, or a CDN.
-
----
-
-## 📱 Pages
+## Routes
 
 | Route | Page |
 |---|---|
-| `/` | Home — hero, categories, featured products |
-| `/shop` | Shop — all products with filters + search |
-| `/product/:id` | Product detail — image, description, add to cart |
-| `/cart` | Cart — items, quantities, totals |
-| `/checkout` | Checkout — customer form + M-Pesa button (UI only) |
+| `/` | Home |
+| `/shop` | Product listing with search + filters |
+| `/product/:id` | Product detail |
+| `/cart` | Shopping cart |
+| `/checkout` | Checkout with M-Pesa |
+| `/admin/login` | Admin authentication |
+| `/admin` | Dashboard |
+| `/admin/orders` | Order management |
+| `/admin/orders/:id` | Order detail |
+| `/admin/products` | Product management |
+| `/admin/products/new` | Create product |
+| `/admin/products/:id/edit` | Edit product |
+| `/admin/settings` | Admin profile settings |
+| `*` | 404 |
 
----
+## Tech Stack
 
-## ✅ Features
-
-- [x] 30 mock products (textbooks, revision, stationery, bags)
-- [x] Filter by category, class level, subject
-- [x] Full-text search
-- [x] Active filter chips with one-click clear
-- [x] Persistent cart (localStorage via Zustand)
-- [x] Add/remove/update quantity in cart
-- [x] Responsive mobile-first layout
-- [x] Loading skeleton animations
-- [x] Empty states (no products, empty cart)
-- [x] Back to School promotional banner
-- [x] Checkout form with validation
-- [x] M-Pesa payment UI (frontend only)
-- [x] Product detail page with related items
-- [x] Breadcrumb navigation
-
----
-
-## 🛠 Tech Stack
-
-- **React 18** + **Vite**
+- **React 18** + **Vite 5**
 - **Tailwind CSS 3**
-- **Zustand** (cart state + localStorage)
+- **Zustand** (state management + persist middleware)
 - **React Router v6**
 - **Lucide React** (icons)
-- **Google Fonts** – Nunito + DM Sans
 
----
+## Key Patterns
 
-*Built for Them Bookshop, Kenya 🇰🇪*
+- **Image fallback**: All product images gracefully degrade to a BookOpen icon on load error
+- **Fresh prices**: Checkout fetches current product prices from the API to avoid stale localStorage data
+- **Cancelled fetches**: Product detail page uses a `cancelled` flag to prevent state updates after unmount
+- **Debounced search**: Filter search debounces at 350ms; category/level/subject changes fire instantly
+- **Error boundary**: Top-level ErrorBoundary catches render crashes with a recovery UI

@@ -2,7 +2,7 @@ require "active_support/core_ext/integer/time"
 Rails.application.configure do
   config.enable_reloading = false
   config.eager_load = true
-  config.active_storage.service = :amazon
+  config.active_storage.service = :local
   config.action_mailer.delivery_method = :smtp
   config.action_mailer.smtp_settings = {
     address: ENV.fetch("SMTP_HOST"),

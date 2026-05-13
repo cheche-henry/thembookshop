@@ -1,14 +1,19 @@
-import { Trash2, Plus, Minus } from 'lucide-react'
+import { useState } from 'react'
+import { Trash2, Plus, Minus, BookOpen } from 'lucide-react'
 import { useCartStore } from '../context/cartStore'
 import { formatKES } from '../utils/format'
 import { Link } from 'react-router-dom'
 export default function CartItem({ item }) {
+  const [imgError, setImgError] = useState(false)
   const updateQuantity = useCartStore((s) => s.updateQuantity)
   const removeFromCart = useCartStore((s) => s.removeFromCart)
   return (
     <div className="flex gap-4 p-4 bg-white rounded-2xl shadow-sm">
-      <Link to={`/product/${item.id}`} className="flex-shrink-0">
-        <img src={item.image} alt={item.name} className="w-20 h-20 object-cover rounded-xl bg-gray-50"/>
+      <Link to={`/product/${item.id}`} className="flex-shrink-0 w-20 h-20 rounded-xl bg-gray-50 overflow-hidden">
+        {item.image_url && !imgError
+          ? <img src={item.image_url} alt={item.name} onError={() => setImgError(true)} className="w-full h-full object-cover" />
+          : <div className="w-full h-full flex items-center justify-center"><BookOpen className="w-8 h-8 text-gray-200" /></div>
+        }
       </Link>
       <div className="flex-1 min-w-0">
         <Link to={`/product/${item.id}`}><h3 className="font-bold text-gray-800 text-sm leading-snug hover:text-green-600 transition-colors line-clamp-2" style={{fontFamily:'Nunito,sans-serif'}}>{item.name}</h3></Link>

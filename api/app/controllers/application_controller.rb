@@ -2,7 +2,6 @@ class ApplicationController < ActionController::API
   include ActionController::HttpAuthentication::Token::ControllerMethods
 
   # ── Error handling ────────────────────────────────────────────────────────
-  rescue_from StandardError,                       with: :handle_internal_error
   rescue_from ActiveRecord::RecordNotFound,        with: :handle_not_found
   rescue_from ActiveRecord::RecordInvalid,         with: :handle_unprocessable
   rescue_from ActionController::ParameterMissing,  with: :handle_bad_request
@@ -10,6 +9,7 @@ class ApplicationController < ActionController::API
   rescue_from Product::InsufficientStockError,     with: :handle_unprocessable
   rescue_from JsonWebToken::DecodeError,           with: :handle_unauthorized
   rescue_from JsonWebToken::ExpiredToken,          with: :handle_token_expired
+  rescue_from StandardError,                       with: :handle_internal_error
 
   private
 

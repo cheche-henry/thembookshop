@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
-import { useParams, Link, useNavigate } from 'react-router-dom'
-import { ShoppingCart, ArrowLeft, Plus, Minus, Tag, BookOpen, GraduationCap, ChevronRight, AlertCircle } from 'lucide-react'
+import { useParams, Link } from 'react-router-dom'
+import { ShoppingCart, Plus, Minus, Tag, BookOpen, GraduationCap, ChevronRight, AlertCircle } from 'lucide-react'
 import { useCartStore } from '../context/cartStore'
 import { formatKES, badgeColor } from '../utils/format'
 import ProductCard from '../components/ProductCard'
@@ -19,24 +19,32 @@ export default function ProductDetailPage() {
   const [imgError, setImgError] = useState(false)
 
   useEffect(() => {
+    let cancelled = false
     setLoading(true)
     setError(null)
     setImgError(false)
     setQty(1)
-    fetch(`${API_BASE}/api/v1/products/${id}`)
-      .then(r => r.json())
-      .then(data => {
+
+    const load = async () => {
+      try {
+        const res = await fetch(`${API_BASE}/api/v1/products/${id}`)
+        const data = await res.json()
         if (!data.success) throw new Error(data.message || 'Product not found')
+        if (cancelled) return
         setProduct(data.data)
-        // Load related products (same category)
-        return fetch(`${API_BASE}/api/v1/products?category=${encodeURIComponent(data.data.category)}&per_page=5`)
-      })
-      .then(r => r.json())
-      .then(data => {
-        setRelated((data.data || []).filter(p => p.id !== Number(id)).slice(0, 4))
-      })
-      .catch(e => setError(e.message))
-      .finally(() => setLoading(false))
+
+        const relRes = await fetch(`${API_BASE}/api/v1/products?category=${encodeURIComponent(data.data.category)}&per_page=5`)
+        const relData = await relRes.json()
+        if (!cancelled) setRelated((relData.data || []).filter(p => p.id !== Number(id)).slice(0, 4))
+      } catch (e) {
+        if (!cancelled) setError(e.message)
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    }
+
+    load()
+    return () => { cancelled = true }
   }, [id])
 
   const handleAddToCart = () => {
@@ -67,8 +75,6 @@ export default function ProductDetailPage() {
     </div>
   )
 
-  const imageSrc = product.image_url || product.image
-
   return (
     <div className="page-enter max-w-7xl mx-auto px-4 sm:px-6 py-8">
       {/* Breadcrumb */}
@@ -84,9 +90,9 @@ export default function ProductDetailPage() {
         {/* Image */}
         <div className="relative">
           <div className="aspect-square bg-gray-50 rounded-2xl overflow-hidden shadow-sm">
-            {imageSrc && !imgError ? (
+            {product.image_url && !imgError ? (
               <img
-                src={imageSrc}
+                src={product.image_url}
                 alt={product.name}
                 onError={() => setImgError(true)}
                 className="w-full h-full object-cover"

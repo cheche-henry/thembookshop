@@ -1,10 +1,12 @@
 import { Routes, Route, useLocation } from 'react-router-dom'
 import { useEffect } from 'react'
+import ErrorBoundary from './components/ErrorBoundary'
 
 // ── Store layout ──────────────────────────────────────────────────────────────
 import Navbar from './components/Navbar'
 import Footer from './components/Footer'
 import HomePage from './pages/HomePage'
+import NotFoundPage from './pages/NotFoundPage'
 import ShopPage from './pages/ShopPage'
 import ProductDetailPage from './pages/ProductDetailPage'
 import CartPage from './pages/CartPage'
@@ -38,11 +40,8 @@ function StoreLayout({ children }) {
 }
 
 export default function App() {
-  const { pathname } = useLocation()
-  const isAdmin = pathname.startsWith('/admin')
-
   return (
-    <>
+    <ErrorBoundary>
       <ScrollToTop />
       <Routes>
         {/* ── Public admin login (no layout) ───────────────────────────── */}
@@ -60,6 +59,7 @@ export default function App() {
                 <Route path="products/new"           element={<ProductFormPage />} />
                 <Route path="products/:id/edit"      element={<ProductFormPage />} />
                 <Route path="settings"               element={<SettingsPage />} />
+                <Route path="*"                      element={<NotFoundPage />} />
               </Routes>
             </AdminLayout>
           </AdminRoute>
@@ -74,10 +74,11 @@ export default function App() {
               <Route path="/product/:id" element={<ProductDetailPage />} />
               <Route path="/cart"        element={<CartPage />} />
               <Route path="/checkout"    element={<CheckoutPage />} />
+              <Route path="*"            element={<NotFoundPage />} />
             </Routes>
           </StoreLayout>
         } />
       </Routes>
-    </>
+    </ErrorBoundary>
   )
 }

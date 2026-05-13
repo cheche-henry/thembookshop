@@ -16,9 +16,6 @@ export default function ProductCard({ product }) {
     setTimeout(() => setAdded(false), 1500)
   }
 
-  // Support both API (image_url) and legacy mock data (image)
-  const imageSrc = product.image_url || product.image
-
   return (
     <Link
       to={`/product/${product.id}`}
@@ -26,9 +23,9 @@ export default function ProductCard({ product }) {
     >
       {/* Image */}
       <div className="relative overflow-hidden bg-gray-50 h-48">
-        {imageSrc && !imgError ? (
+        {product.image_url && !imgError ? (
           <img
-            src={imageSrc}
+            src={product.image_url}
             alt={product.name}
             onError={() => setImgError(true)}
             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"

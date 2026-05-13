@@ -1,7 +1,8 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { Phone, MapPin, User, ShoppingBag, CheckCircle, AlertCircle, Smartphone, Clock, Shield } from 'lucide-react'
 import { useCartStore } from '../context/cartStore'
+import Field from '../components/Field'
 import { formatKES } from '../utils/format'
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3000'
@@ -15,78 +16,35 @@ const LOCATIONS = [
 export default function CheckoutPage() {
   const items     = useCartStore((s) => s.items)
   const clearCart = useCartStore((s) => s.clearCart)
-  const total     = items.reduce((sum, i) => sum + i.price * i.quantity, 0)
 
+  const [freshPrices, setFreshPrices] = useState(null)
   const [form, setForm]     = useState({ fullName:'', phone:'', email:'', location:'', notes:'' })
   const [errors, setErrors] = useState({})
   const [submitting, setSub] = useState(false)
   const [apiError, setApiErr] = useState('')
   const [order, setOrder]   = useState(null)
 
-  if (items.length === 0 && !order) return (
-    <div className="max-w-7xl mx-auto px-4 py-20 text-center page-enter">
-      <ShoppingBag className="w-12 h-12 text-gray-200 mx-auto mb-4" />
-      <p className="text-gray-500 mb-4 font-semibold">Your cart is empty.</p>
-      <Link to="/shop" className="bg-green-600 hover:bg-green-700 text-white font-bold px-6 py-3 rounded-xl transition-colors">Browse the Shop</Link>
-    </div>
-  )
+  // Fetch fresh prices from API so cart prices aren't stale
+  useEffect(() => {
+    if (items.length === 0) return
+    let cancelled = false
+    fetch(`${API_BASE}/api/v1/products?per_page=100`)
+      .then(r => r.json())
+      .then(data => {
+        if (cancelled) return
+        const map = {}
+        ;(data.data || []).forEach(p => { map[p.id] = p.price })
+        setFreshPrices(map)
+      })
+      .catch(() => {}) // fall back to cart prices on network error
+    return () => { cancelled = true }
+  }, [items.length])
 
-  if (order) return (
-    <div className="max-w-lg mx-auto px-4 py-16 text-center page-enter">
-      <div className="bg-white rounded-2xl shadow-sm p-8">
-        <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-          <Smartphone className="w-8 h-8 text-green-600" />
-        </div>
-        <h2 className="font-bold text-2xl text-gray-800 mb-2" style={{fontFamily:'Nunito,sans-serif'}}>
-          Check Your Phone!
-        </h2>
-        <p className="text-gray-500 mb-4 text-sm leading-relaxed">
-          An M-Pesa payment request has been sent to <strong className="text-gray-800">{form.phone}</strong>.
-          Open your phone and enter your M-Pesa PIN to complete payment.
-        </p>
+  const price = (item) => (freshPrices && freshPrices[item.id] != null ? freshPrices[item.id] : item.price)
+  const total = items.reduce((sum, i) => sum + price(i) * i.quantity, 0)
 
-        {/* Order reference */}
-        <div className="bg-gray-50 rounded-xl p-4 mb-5">
-          <p className="text-xs text-gray-400 mb-1">Order Reference</p>
-          <p className="font-mono font-bold text-green-600 text-lg">{order.reference}</p>
-        </div>
-
-        {/* Payment status */}
-        <div className={`flex items-center justify-center gap-2 text-sm px-4 py-3 rounded-xl mb-5 ${
-          order.mpesa_sent
-            ? 'bg-green-50 text-green-700 border border-green-200'
-            : 'bg-amber-50 text-amber-700 border border-amber-200'
-        }`}>
-          {order.mpesa_sent
-            ? <><CheckCircle className="w-4 h-4 flex-shrink-0" /> M-Pesa prompt sent successfully</>
-            : <><AlertCircle className="w-4 h-4 flex-shrink-0" /> {order.mpesa_message}</>
-          }
-        </div>
-
-        {/* What happens after payment */}
-        <div className="text-left bg-blue-50 rounded-xl p-4 mb-6 text-sm space-y-2">
-          <p className="font-bold text-blue-800 mb-2" style={{fontFamily:'Nunito,sans-serif'}}>After you pay:</p>
-          <p className="text-blue-700">✅ Your order will be confirmed automatically</p>
-          <p className="text-blue-700">📧 You'll receive a confirmation email</p>
-          <p className="text-blue-700">📦 We'll prepare your items for delivery</p>
-        </div>
-
-        <div className="text-xs text-gray-400 mb-6 flex items-center justify-center gap-1">
-          <Clock className="w-3.5 h-3.5" />
-          M-Pesa prompt expires in 5 minutes
-        </div>
-
-        <div className="flex flex-col gap-3">
-          <Link to="/" className="bg-green-600 hover:bg-green-700 text-white font-bold px-6 py-3 rounded-xl transition-colors text-sm" style={{fontFamily:'Nunito,sans-serif'}}>
-            Back to Home
-          </Link>
-          <Link to="/shop" className="text-green-600 hover:text-green-800 font-semibold text-sm" style={{fontFamily:'Nunito,sans-serif'}}>
-            Continue Shopping
-          </Link>
-        </div>
-      </div>
-    </div>
-  )
+  if (items.length === 0 && !order) return <EmptyCart />
+  if (order) return <OrderConfirmation order={order} phone={form.phone} />
 
   const validate = () => {
     const e = {}
@@ -134,11 +92,8 @@ export default function CheckoutPage() {
   return (
     <div className="page-enter max-w-5xl mx-auto px-4 sm:px-6 py-8">
 
-      {/* Page header */}
       <div className="mb-6">
         <h1 className="text-2xl md:text-3xl font-bold text-gray-800" style={{fontFamily:'Nunito,sans-serif'}}>Checkout</h1>
-
-        {/* Payment flow steps */}
         <div className="flex items-center gap-2 mt-3 overflow-x-auto pb-1">
           {[
             { step: '1', label: 'Fill details', active: true },
@@ -165,7 +120,6 @@ export default function CheckoutPage() {
         </div>
       )}
 
-      {/* Important M-Pesa notice */}
       <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 mb-6 flex items-start gap-3">
         <Smartphone className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
         <div>
@@ -173,7 +127,7 @@ export default function CheckoutPage() {
             Your order is only confirmed after M-Pesa payment
           </p>
           <p className="text-amber-700 text-xs mt-0.5 leading-relaxed">
-            Clicking "Pay with M-Pesa" will send a payment request to your phone. Enter your PIN within 5 minutes to confirm your order. No payment = no order.
+            Clicking &ldquo;Pay with M-Pesa&rdquo; will send a payment request to your phone. Enter your PIN within 5 minutes to confirm your order. No payment = no order.
           </p>
         </div>
       </div>
@@ -181,7 +135,6 @@ export default function CheckoutPage() {
       <form onSubmit={handleSubmit}>
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
 
-          {/* Customer details */}
           <div className="lg:col-span-2 space-y-5">
             <div className="bg-white rounded-2xl shadow-sm p-6">
               <h2 className="font-bold text-gray-800 text-base mb-5 flex items-center gap-2" style={{fontFamily:'Nunito,sans-serif'}}>
@@ -193,7 +146,7 @@ export default function CheckoutPage() {
                     className={`w-full border rounded-xl px-4 py-2.5 text-gray-800 text-sm focus:outline-none focus:ring-2 focus:ring-green-400 transition-all ${errors.fullName ? 'border-red-300 bg-red-50' : 'border-gray-200'}`}
                     placeholder="e.g. Jane Muthoni Kamau"
                     value={form.fullName}
-                    onChange={e => { setForm({...form, fullName: e.target.value}); setErrors({...errors, fullName:''}) }}
+                    onChange={e => { setForm({...form, fullName: e.target.value}); setErrors({...errors, fullName: ''}) }}
                   />
                 </Field>
 
@@ -205,7 +158,7 @@ export default function CheckoutPage() {
                       placeholder="e.g. 0712 345 678"
                       type="tel"
                       value={form.phone}
-                      onChange={e => { setForm({...form, phone: e.target.value}); setErrors({...errors, phone:''}) }}
+                      onChange={e => { setForm({...form, phone: e.target.value}); setErrors({...errors, phone: ''}) }}
                     />
                   </div>
                 </Field>
@@ -226,7 +179,7 @@ export default function CheckoutPage() {
                     <select
                       className={`w-full border rounded-xl pl-10 pr-4 py-2.5 text-gray-800 text-sm focus:outline-none focus:ring-2 focus:ring-green-400 transition-all appearance-none ${errors.location ? 'border-red-300 bg-red-50' : 'border-gray-200'}`}
                       value={form.location}
-                      onChange={e => { setForm({...form, location: e.target.value}); setErrors({...errors, location:''}) }}
+                      onChange={e => { setForm({...form, location: e.target.value}); setErrors({...errors, location: ''}) }}
                     >
                       <option value="">— Select your town / area —</option>
                       {LOCATIONS.map(l => <option key={l} value={l}>{l}</option>)}
@@ -245,14 +198,12 @@ export default function CheckoutPage() {
               </div>
             </div>
 
-            {/* Security note */}
             <div className="flex items-start gap-3 text-xs text-gray-500 px-1">
               <Shield className="w-4 h-4 text-green-500 flex-shrink-0 mt-0.5" />
               <p>Your phone number is only used for M-Pesa payment processing. We never store your M-Pesa PIN.</p>
             </div>
           </div>
 
-          {/* Order summary */}
           <div>
             <div className="bg-white rounded-2xl shadow-sm p-6 sticky top-24">
               <h2 className="font-bold text-gray-800 mb-4" style={{fontFamily:'Nunito,sans-serif'}}>Order Summary</h2>
@@ -261,8 +212,8 @@ export default function CheckoutPage() {
                 {items.map(item => (
                   <div key={item.id} className="flex gap-3 py-2 border-b border-gray-50 last:border-0">
                     <div className="w-10 h-10 rounded-lg bg-gray-100 flex-shrink-0 overflow-hidden">
-                      {(item.image_url || item.image)
-                        ? <img src={item.image_url || item.image} alt={item.name} className="w-full h-full object-cover" />
+                      {item.image_url
+                        ? <img src={item.image_url} alt={item.name} className="w-full h-full object-cover" />
                         : <ShoppingBag className="w-5 h-5 text-gray-400 m-auto mt-2" />
                       }
                     </div>
@@ -270,7 +221,7 @@ export default function CheckoutPage() {
                       <p className="font-semibold text-gray-700 text-xs leading-snug line-clamp-1">{item.name}</p>
                       <p className="text-gray-400 text-xs">Qty: {item.quantity}</p>
                     </div>
-                    <p className="text-gray-700 font-semibold text-xs flex-shrink-0">{formatKES(item.price * item.quantity)}</p>
+                    <p className="text-gray-700 font-semibold text-xs flex-shrink-0">{formatKES(price(item) * item.quantity)}</p>
                   </div>
                 ))}
               </div>
@@ -290,7 +241,6 @@ export default function CheckoutPage() {
                 <span className="font-bold text-xl text-green-600" style={{fontFamily:'Nunito,sans-serif'}}>{formatKES(total)}</span>
               </div>
 
-              {/* Pay button */}
               <button
                 type="submit"
                 disabled={submitting}
@@ -300,7 +250,7 @@ export default function CheckoutPage() {
                 {submitting ? (
                   <>
                     <span className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    <span className="text-sm">Sending M-Pesa prompt…</span>
+                    <span className="text-sm">Sending M-Pesa prompt&hellip;</span>
                   </>
                 ) : (
                   <>
@@ -323,13 +273,68 @@ export default function CheckoutPage() {
   )
 }
 
-function Field({ label, children, error, hint }) {
+function EmptyCart() {
   return (
-    <div>
-      <label className="block font-semibold text-sm text-gray-700 mb-1.5" style={{fontFamily:'Nunito,sans-serif'}}>{label}</label>
-      {children}
-      {hint && !error && <p className="text-xs text-gray-400 mt-1">{hint}</p>}
-      {error && <p className="text-xs text-red-500 mt-1 font-semibold">{error}</p>}
+    <div className="max-w-7xl mx-auto px-4 py-20 text-center page-enter">
+      <ShoppingBag className="w-12 h-12 text-gray-200 mx-auto mb-4" />
+      <p className="text-gray-500 mb-4 font-semibold">Your cart is empty.</p>
+      <Link to="/shop" className="bg-green-600 hover:bg-green-700 text-white font-bold px-6 py-3 rounded-xl transition-colors">Browse the Shop</Link>
+    </div>
+  )
+}
+
+function OrderConfirmation({ order, phone }) {
+  return (
+    <div className="max-w-lg mx-auto px-4 py-16 text-center page-enter">
+      <div className="bg-white rounded-2xl shadow-sm p-8">
+        <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+          <Smartphone className="w-8 h-8 text-green-600" />
+        </div>
+        <h2 className="font-bold text-2xl text-gray-800 mb-2" style={{fontFamily:'Nunito,sans-serif'}}>
+          Check Your Phone!
+        </h2>
+        <p className="text-gray-500 mb-4 text-sm leading-relaxed">
+          An M-Pesa payment request has been sent to <strong className="text-gray-800">{phone}</strong>.
+          Open your phone and enter your M-Pesa PIN to complete payment.
+        </p>
+
+        <div className="bg-gray-50 rounded-xl p-4 mb-5">
+          <p className="text-xs text-gray-400 mb-1">Order Reference</p>
+          <p className="font-mono font-bold text-green-600 text-lg">{order.reference}</p>
+        </div>
+
+        <div className={`flex items-center justify-center gap-2 text-sm px-4 py-3 rounded-xl mb-5 ${
+          order.mpesa_sent
+            ? 'bg-green-50 text-green-700 border border-green-200'
+            : 'bg-amber-50 text-amber-700 border border-amber-200'
+        }`}>
+          {order.mpesa_sent
+            ? <><CheckCircle className="w-4 h-4 flex-shrink-0" /> M-Pesa prompt sent successfully</>
+            : <><AlertCircle className="w-4 h-4 flex-shrink-0" /> {order.mpesa_message}</>
+          }
+        </div>
+
+        <div className="text-left bg-blue-50 rounded-xl p-4 mb-6 text-sm space-y-2">
+          <p className="font-bold text-blue-800 mb-2" style={{fontFamily:'Nunito,sans-serif'}}>After you pay:</p>
+          <p className="text-blue-700">✅ Your order will be confirmed automatically</p>
+          <p className="text-blue-700">📧 You'll receive a confirmation email</p>
+          <p className="text-blue-700">📦 We'll prepare your items for delivery</p>
+        </div>
+
+        <div className="text-xs text-gray-400 mb-6 flex items-center justify-center gap-1">
+          <Clock className="w-3.5 h-3.5" />
+          M-Pesa prompt expires in 5 minutes
+        </div>
+
+        <div className="flex flex-col gap-3">
+          <Link to="/" className="bg-green-600 hover:bg-green-700 text-white font-bold px-6 py-3 rounded-xl transition-colors text-sm" style={{fontFamily:'Nunito,sans-serif'}}>
+            Back to Home
+          </Link>
+          <Link to="/shop" className="text-green-600 hover:text-green-800 font-semibold text-sm" style={{fontFamily:'Nunito,sans-serif'}}>
+            Continue Shopping
+          </Link>
+        </div>
+      </div>
     </div>
   )
 }

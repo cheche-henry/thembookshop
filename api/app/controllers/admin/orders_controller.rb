@@ -77,7 +77,7 @@ module Admin
       today      = Time.current.beginning_of_day
       this_month = Time.current.beginning_of_month
 
-      render_success(
+      render_success({
         total_orders:          Order.count,
         orders_today:          Order.where("created_at >= ?", today).count,
         orders_this_month:     Order.where("created_at >= ?", this_month).count,
@@ -94,7 +94,7 @@ module Admin
         low_stock_products:    Product.active.where("stock_quantity <= 5").count,
         out_of_stock_products: Product.active.where(stock_quantity: 0).count,
         total_products:        Product.active.count,
-      )
+      })
     end
 
     private

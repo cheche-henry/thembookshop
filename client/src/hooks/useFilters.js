@@ -14,6 +14,7 @@ export function useFilters(initialSearch = '', initialCategory = 'all') {
   const [page, setPage]             = useState(1)
 
   const debounceRef = useRef(null)
+  const mountedRef  = useRef(false)
 
   const fetchProducts = useCallback(async (params) => {
     setLoading(true)
@@ -41,8 +42,9 @@ export function useFilters(initialSearch = '', initialCategory = 'all') {
 
   useEffect(() => {
     clearTimeout(debounceRef.current)
-    // Debounce search typing (350ms), but apply filter changes instantly
-    const delay = debounceRef.current !== null && search !== '' ? 350 : 0
+    const isSearchTyping = search !== '' && mountedRef.current
+    const delay = isSearchTyping ? 350 : 0
+    mountedRef.current = true
     debounceRef.current = setTimeout(() => {
       fetchProducts({ q: search, category, classLevel, subject, page })
     }, delay)

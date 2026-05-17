@@ -1,20 +1,38 @@
 import { Link } from 'react-router-dom'
-import { ShoppingCart, Tag, BookOpen } from 'lucide-react'
+import { ShoppingCart, Plus, Minus, Tag, BookOpen } from 'lucide-react'
 import { useCartStore } from '../context/cartStore'
 import { formatKES, badgeColor } from '../utils/format'
 import { useState } from 'react'
 
 export default function ProductCard({ product }) {
-  const addToCart = useCartStore((s) => s.addToCart)
-  const [added, setAdded]   = useState(false)
+  const items           = useCartStore((s) => s.items)
+  const addToCart       = useCartStore((s) => s.addToCart)
+  const updateQuantity  = useCartStore((s) => s.updateQuantity)
+  const removeFromCart  = useCartStore((s) => s.removeFromCart)
   const [imgError, setImgError] = useState(false)
+
+  const cartItem = items.find((i) => i.id === product.id)
 
   const handleAdd = (e) => {
     e.preventDefault()
+    e.stopPropagation()
     addToCart(product)
-    setAdded(true)
-    setTimeout(() => setAdded(false), 1500)
   }
+
+  const handleDec = (e) => {
+    e.preventDefault()
+    e.stopPropagation()
+    if (cartItem.quantity <= 1) removeFromCart(product.id)
+    else updateQuantity(product.id, cartItem.quantity - 1)
+  }
+
+  const handleInc = (e) => {
+    e.preventDefault()
+    e.stopPropagation()
+    updateQuantity(product.id, cartItem.quantity + 1)
+  }
+
+  const inCart = cartItem && cartItem.quantity > 0
 
   return (
     <Link
@@ -74,19 +92,38 @@ export default function ProductCard({ product }) {
           <span className="font-bold text-green-600 text-base" style={{fontFamily:'Nunito,sans-serif'}}>
             {formatKES(product.price)}
           </span>
-          <button
-            onClick={handleAdd}
-            disabled={product.stock_quantity === 0}
-            className={`flex items-center gap-1.5 text-xs font-semibold py-2 px-3 rounded-xl transition-all duration-200 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed ${
-              added
-                ? 'bg-green-100 text-green-700'
-                : 'bg-green-600 hover:bg-green-700 text-white shadow-sm'
-            }`}
-            style={{fontFamily:'Nunito,sans-serif'}}
-          >
-            <ShoppingCart className="w-3.5 h-3.5" />
-            {added ? 'Added!' : 'Add'}
-          </button>
+          {inCart ? (
+            <div
+              className="flex items-center gap-1 bg-green-100 rounded-xl p-0.5"
+              onClick={(e) => e.preventDefault()}
+            >
+              <button
+                onClick={handleDec}
+                className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-white transition-colors text-green-700"
+              >
+                <Minus className="w-3.5 h-3.5" />
+              </button>
+              <span className="w-8 text-center font-bold text-sm text-green-800" style={{fontFamily:'Nunito,sans-serif'}}>
+                {cartItem.quantity}
+              </span>
+              <button
+                onClick={handleInc}
+                className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-white transition-colors text-green-700"
+              >
+                <Plus className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={handleAdd}
+              disabled={product.stock_quantity === 0}
+              className="flex items-center gap-1.5 text-xs font-semibold py-2 px-3 rounded-xl transition-all duration-200 active:scale-95 bg-green-600 hover:bg-green-700 text-white shadow-sm disabled:opacity-40 disabled:cursor-not-allowed"
+              style={{fontFamily:'Nunito,sans-serif'}}
+            >
+              <ShoppingCart className="w-3.5 h-3.5" />
+              Add
+            </button>
+          )}
         </div>
       </div>
     </Link>

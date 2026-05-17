@@ -26,6 +26,7 @@ export default function ProductFormPage() {
   const [errors, setErrors]       = useState({})
   const [restockQty, setRestock]  = useState(0)
   const [restocking, setRestocking] = useState(false)
+  const stockFocused = useRef(false)
 
   useEffect(() => {
     if (!isEdit) return
@@ -38,7 +39,7 @@ export default function ProductFormPage() {
         category:       p.category || '',
         class_level:    p.class_level || '',
         subject:        p.subject || '',
-        stock_quantity: p.stock_quantity ?? '0',
+        stock_quantity: String(p.stock_quantity ?? '0'),
         active:         p.active ?? true,
         badge:          p.badge || '',
         sort_order:     p.sort_order ?? '0',
@@ -97,7 +98,9 @@ export default function ProductFormPage() {
     setRestocking(true)
     try {
       const res = await api.products.restock(id, restockQty)
-      setForm(f => ({ ...f, stock_quantity: res.data.stock_quantity }))
+      if (!stockFocused.current) {
+        setForm(f => ({ ...f, stock_quantity: String(res.data.stock_quantity) }))
+      }
       setRestock(0)
       alert(`Stock updated to ${res.data.stock_quantity}`)
     } catch (e) {
@@ -170,10 +173,15 @@ export default function ProductFormPage() {
             />
             <Input
               label="Stock Quantity"
-              type="number"
-              min="0"
+              type="text"
+              inputMode="numeric"
               value={form.stock_quantity}
-              onChange={e => set('stock_quantity', e.target.value)}
+              onChange={e => {
+                const v = e.target.value
+                if (v === '' || /^\d+$/.test(v)) set('stock_quantity', v)
+              }}
+              onFocus={() => { stockFocused.current = true }}
+              onBlur={() => { stockFocused.current = false }}
             />
           </div>
 

@@ -18,10 +18,10 @@ admin.save!
 puts "✅ Admin: #{admin.email}"
 
 # ── Helper: parse grade prefix ─────────────────────────────────────────────────
-# Products prefixed "7-MENTOR MATH" mean Grade 7 (Junior Secondary)
-# "6-SPOTLIGHT ENGLISH" means Grade 6, etc.
 def parse_grade(prefix)
   case prefix.to_s
+  when "PP1" then "PP1"
+  when "PP2" then "PP2"
   when "1"  then "Grade 1"
   when "2"  then "Grade 2"
   when "3"  then "Grade 3"
@@ -32,8 +32,6 @@ def parse_grade(prefix)
   when "8"  then "Grade 8"
   when "9"  then "Grade 9"
   when "10" then "Grade 10"
-  when "PP1" then "PP1"
-  when "PP2" then "PP2"
   else nil
   end
 end
@@ -59,31 +57,41 @@ def guess_subject(title)
   nil
 end
 
-def guess_category(title, prefix)
-  return "Textbooks" if prefix
+def guess_category(title, raw, grade_str)
+  return "Textbooks" if grade_str.present?
 
-  t = title.upcase
-  # Reference / revision books
+  t = raw.upcase
+
+  # ── Revision Books ─────────────────────────────────────────────────────
   return "Revision Books" if t.match?(/KCSE MADE FAMILIAR|KMF |HIGH FLYER PHYSICS|HOW TO PASS|MASTERING CHEM|MASTERING BIO|TOP NOTCH|MIRROR |MASTERPIECE|A PLUS BIO|F3 |F4 |TARGETER CHEM|KNEC TABLES|SPOTLIGHT BIO|BETTER COMPOSITION|SOLVING PROBLEMS|GET IT RIGHT|BETTER ENGLISH|PIONEER REVISION|TARGETER TRACKER$|SMARTWAY BOOSTER$|HIGH FLYER$/)
-  return "Revision Books" if t.match?(/GUIDE /)
-  return "Revision Books" if title.start_with?("GUIDE")
+  return "Revision Books" if title.start_with?("GUIDE ")
 
-  # Storybooks / fiction
-  return "Storybooks" if t.match?(/MASKINI|MASHETANI|MEMORIES WE LOST|MSTAHIKI|WHALERIDER|PARLIAMENT|MAPAMBAZUKO|GOVERNMENT INSPECTOR|KOSA LA BWANA|FATHER OF NATION|NGUU ZA JADI|BEMBEA|MASHIMO|SAMARITAN|THE PEARL|KIGOGO|CHOZI|INHERITANCE|KEY WORDS|DIARY OF A WIMPY|AMBASSANDORS|KABURI|KIJANA ALIYEUZA|KALULU|RAIN MAKER|TOUGH CHOICES|UTEUZI|TOBYS DIARY|PRINCE AT THE MALL|MWANA MBUZI|NYAMA IFICHWE|KIKI GOES|ALONE IN THE STORM|FAYO IS LOST|KIDDLE LIBRARY|KASUKU NA SOFIA|KAJUJU|MJI WA|HIDAYA|TEARS OF JOY|BRIDGES WITHOUT RIVERS|LAST LAUGH|MSHALE WA|WEMA HAUOZI|HIDDEN PACKAGE|SWEET POTATO|VANISHING POTATOES|STRANGERS IN THE TOILET|JIMMY THE JEEP|NDOTO YA AMERICA|BEAUTIFUL NYAKIO|FAYO GOES|HODI HODI|STRANGE HAPPENINGS|MELODIES FROM AFRICA|BEKAS|JKF READERS|DAUGHTERS OF NATURE|SUN AND THE WIND|JANE AND PETER|MAISHA MAPYA|BENDI YA MUZIKI|LOST PHONE|BURDEN OF GUILT|GLASS HOUSE|MLEMAVU|A LOG IN THE EYE|WE COME IN PEACE|SILENT SONG|NPPE GR|SOUND AND READ|SOUND & READ|MASTERING SOUNDS|GOOD NEWS|A SILENT SONG/)
+  # ── Exercise Books ─────────────────────────────────────────────────────
+  return "Exercise Books" if t.match?(/\dPGS\b|SUPERIOR|KASUKU|GRAPH BOOK|FLIP CHART|SCRAP BOOK|QUIRE|CASH BOOK|LEDGER|FULLSCAPS|LOOSE LEAF|SHORTHAND|SPIRAL NOTE|EXECUTIVE NOTE|EXECUTIVE DIARY|HCOVER|ADMISSION REGISTER|STAFF REGISTER|SCHOOL DIARIES|VISITORS BOOK|NUMBERED RECEIPT|LESSON PLAN|SCHEME OF WORK|CONSUMABLE STORE|DELIVER BOOK|ORDER BOOK|REGISTERS|QUILL/)
+  return "Exercise Books" if t.match?(/\AA[4567]\b/)
 
-  # Dictionaries / reference
-  return "Storybooks" if t.match?(/DICTIONARY|KAMUSI|KAMUSI YA|FANI YA FASIHI|FANI ZA KISWAHILI|BETTER ENGLISH|BETTER COMPOSITION|KEY WORDS/)
+  # ── Pens & Pencils ─────────────────────────────────────────────────────
+  return "Pens & Pencils" if t.match?(/PENCIL|BIC\b|OBAMA|CHAMPION PEN|YOUTH PEN|PENTONIC|ROLLER PEN|GELX PEN|EXECUTIVE PEN|DOLLAR PEN|FOUNTAIN PEN|MARKER PEN|WHITE BOARD MARKER|HIGHLIGHTER|CORRECTION FLUID|CORRECTION PEN|CARBON\b|ERASER|SHARPENER|CLAYON|CRAYON|WATER COLOUR|PAINTING BRUSH|POWDER COLOR|MOLDING CLAY|SUGAR PAPER|MANILA\b/)
 
-  # Bibles / religious
-  return "Storybooks" if t.match?(/BIBLE|KIROHO|ROHO MUTHERU|KUINIRA NGAI|NYIMBO|GOLDEN BELLS|KUGUNA|IBUKU RIA|THARA|KIKUYU BIBLE|KISII BIBLE|KISWAHILI BIBLE|NIV|NKJIV|RSV|GOOD NEWS/)
+  # ── Geometry Sets ──────────────────────────────────────────────────────
+  return "Geometry Sets" if t.match?(/MATH SET|MATHS SET|SET SQUARE|STENCIL|BB COMPASS|BB DIVIDER|TRICIRCLE|TRI CIRCLE|KOFA|NATARAJ.*SET/)
 
+  # ── Rulers ─────────────────────────────────────────────────────────────
+  return "Rulers" if t.match?(/RULER/)
+
+  # ── School Bags ────────────────────────────────────────────────────────
+  return "School Bags" if t.match?(/BAG|BACKPACK/)
+
+  # ── Storybooks ─────────────────────────────────────────────────────────
+  return "Storybooks" if t.match?(/MASKINI|MASHETANI|MEMORIES WE LOST|MSTAHIKI|WHALERIDER|PARLIAMENT|MAPAMBAZUKO|GOVERNMENT INSPECTOR|KOSA LA BWANA|FATHER OF NATION|NGUU ZA JADI|BEMBEA|MASHIMO|SAMARITAN|THE PEARL|KIGOGO|CHOZI|INHERITANCE|DIARY OF A WIMPY|AMBASSANDORS|KABURI|KIJANA ALIYEUZA|KALULU|RAIN MAKER|TOUGH CHOICES|UTEUZI|TOBYS DIARY|PRINCE AT THE MALL|MWANA MBUZI|NYAMA IFICHWE|KIKI GOES|ALONE IN THE STORM|FAYO IS LOST|KIDDLE LIBRARY|KASUKU NA SOFIA|KAJUJU|MJI WA|HIDAYA|TEARS OF JOY|BRIDGES WITHOUT RIVERS|LAST LAUGH|MSHALE WA|WEMA HAUOZI|HIDDEN PACKAGE|SWEET POTATO|VANISHING POTATOES|STRANGERS IN THE TOILET|JIMMY THE JEEP|NDOTO YA AMERICA|BEAUTIFUL NYAKIO|FAYO GOES|HODI HODI|STRANGE HAPPENINGS|MELODIES FROM AFRICA|BEKAS|JKF READERS|DAUGHTERS OF NATURE|SUN AND THE WIND|JANE AND PETER|MAISHA MAPYA|BENDI YA MUZIKI|LOST PHONE|BURDEN OF GUILT|GLASS HOUSE|MLEMAVU|A LOG IN THE EYE|WE COME IN PEACE|A SILENT SONG|NPPE GR|SOUND AND READ|SOUND & READ|MASTERING SOUNDS/)
+  return "Storybooks" if t.match?(/FANI YA FASIHI|FANI ZA KISWAHILI/)
+
+  # ── Stationery (catch-all) ─────────────────────────────────────────────
   "Stationery"
 end
 
 # ── Product data ─────────────────────────────────────────────────────────────
 # Format: [raw_name_from_xls, sale_price, stock, badge]
-# Prices marked * were in the XLS (purchase price * 1.25 markup)
-# Others use standard Kenyan market rates for these items
 
 products_data = [
 
@@ -899,20 +907,27 @@ products_data.each_with_index do |(raw_name, price, stock, badge), sort_idx|
   prefix_match = raw_name.match(/\A(\d{1,2}|PP\d)-(.+)\z/)
   grade_str    = prefix_match ? prefix_match[1] : nil
   clean_title  = prefix_match ? prefix_match[2].strip : raw_name.strip
-  clean_title  = clean_title.split.map(&:capitalize).join(" ")
-  clean_title  = clean_title.gsub("L/horn", "Longhorn").gsub("L/Horn", "Longhorn")
-                             .gsub("Mtp", "MTP").gsub("Klb", "KLB")
-                             .gsub("Cre", "CRE").gsub("Cre", "CRE")
-                             .gsub("Pp1", "PP1").gsub("Pp2", "PP2")
-                             .gsub("Jsss", "JSS").gsub("Jss", "JSS")
-                             .gsub("Lhorn", "Longhorn").gsub("Kcse", "KCSE")
-                             .gsub("Knec", "KNEC").gsub("F3", "F3").gsub("F4", "F4")
 
-  full_name = grade_str ? "Grade #{grade_str} — #{clean_title}" : clean_title
+  # Capitalize title
+  capitalized = clean_title.split.map(&:capitalize).join(" ")
+
+  # Fix known casing
+  capitalized = capitalized.gsub("L/horn", "Longhorn").gsub("L/Horn", "Longhorn")
+                           .gsub("Mtp", "MTP").gsub("Klb", "KLB")
+                           .gsub("Kcse", "KCSE").gsub("Knec", "KNEC")
+                           .gsub("Cre", "CRE")
+                           .gsub("Pp1", "PP1").gsub("Pp2", "PP2")
+                           .gsub("Jsss", "JSS").gsub("Jss", "JSS")
+                           .gsub("Lhorn", "Longhorn")
+                           .gsub("Jifunze Kis", "Jifunze Kiswahili")
+                           .gsub("Bio", "Biology").gsub("Chem", "Chemistry")
+                           .gsub("Geo", "Geography").gsub("Agri", "Agriculture")
+
+  full_name = grade_str ? "Grade #{grade_str} — #{capitalized}" : capitalized
   full_name = full_name.gsub("Grade PP1", "PP1").gsub("Grade PP2", "PP2")
 
   class_level = parse_grade(grade_str)
-  category    = guess_category(raw_name, grade_str)
+  category    = guess_category(full_name, raw_name, grade_str)
   subject     = guess_subject(raw_name)
 
   # Build description

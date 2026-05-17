@@ -3,11 +3,15 @@ class Product < ApplicationRecord
   has_many :order_items, dependent: :restrict_with_exception
 
   CATEGORIES = ["Textbooks", "Revision Books", "Storybooks", "Exercise Books",
-                "Pens & Pencils", "Geometry Sets", "Rulers", "School Bags"].freeze
-  CLASS_LEVELS = ["Grade 1","Grade 2","Grade 3","Grade 4","Grade 5","Grade 6",
+                "Pens & Pencils", "Geometry Sets", "Rulers", "School Bags",
+                "Stationery"].freeze
+  CLASS_LEVELS = ["PP1", "PP2",
+                  "Grade 1","Grade 2","Grade 3","Grade 4","Grade 5","Grade 6",
+                  "Grade 7","Grade 8","Grade 9","Grade 10",
                   "Form 1","Form 2","Form 3","Form 4"].freeze
-  SUBJECTS = %w[Mathematics English Science Kiswahili Biology Chemistry
-                Physics Geography History Social\ Studies Creative\ Arts].freeze
+  SUBJECTS = %w[Mathematics English Kiswahili Science Biology Chemistry
+                Physics Geography History Social\ Studies Creative\ Arts
+                CRE Agriculture Pre-Technical Business].freeze
 
   validates :name, presence: true, length: { maximum: 255 }
   validates :price, presence: true, numericality: { greater_than: 0 }

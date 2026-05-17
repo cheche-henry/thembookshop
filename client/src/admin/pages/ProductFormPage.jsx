@@ -4,10 +4,10 @@ import { ArrowLeft, Upload, X, Plus, Minus, Package } from 'lucide-react'
 import { api } from '../utils/api'
 import { Input, Select, Textarea, Btn } from '../components/AdminInput'
 
-const CATEGORIES  = ['Textbooks','Revision Books','Storybooks','Exercise Books','Pens & Pencils','Geometry Sets','Rulers','School Bags']
-const CLASS_LEVELS = ['','Grade 1','Grade 2','Grade 3','Grade 4','Grade 5','Grade 6','Form 1','Form 2','Form 3','Form 4']
-const SUBJECTS    = ['','Mathematics','English','Science','Kiswahili','Biology','Chemistry','Physics','Geography','History','Social Studies','Creative Arts']
-const BADGES      = ['','Best Seller','New','New Edition','Popular','Exam Prep','Bundle Deal','Value Pack','Kids Favorite']
+const CATEGORIES  = ['Textbooks','Revision Books','Storybooks','Exercise Books','Pens & Pencils','Geometry Sets','Rulers','School Bags','Stationery']
+const CLASS_LEVELS = ['','PP1','PP2','Grade 1','Grade 2','Grade 3','Grade 4','Grade 5','Grade 6','Grade 7','Grade 8','Grade 9','Grade 10','Form 1','Form 2','Form 3','Form 4']
+const SUBJECTS    = ['','Mathematics','English','Kiswahili','Science','Biology','Chemistry','Physics','Geography','History','Social Studies','Creative Arts','CRE','Agriculture','Pre-Technical','Business']
+const BADGES      = ['','Best Seller','New','New Edition','Popular','Exam Prep','Bundle Deal','Value Pack','Kids Favorite','Set Book']
 
 const EMPTY = { name:'', description:'', price:'', category:'', class_level:'', subject:'', stock_quantity:'0', active: true, badge:'', sort_order:'0' }
 

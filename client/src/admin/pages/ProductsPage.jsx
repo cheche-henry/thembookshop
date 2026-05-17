@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Search, Plus, RefreshCw, Edit, Trash2, Package, ChevronDown } from 'lucide-react'
 import { api } from '../utils/api'
@@ -15,25 +15,31 @@ export default function ProductsPage() {
   const [deleting, setDeleting] = useState(null)
   const [params, setParams]     = useState({ page: 1, per_page: 25, q: '', category: '' })
   const navigate                = useNavigate()
+  const loadIdRef               = useRef(0)
+  const paramsRef               = useRef(params)
 
-  const load = async (p = params) => {
+  paramsRef.current = params
+
+  const load = async (p) => {
+    const id = ++loadIdRef.current
     setLoading(true)
     try {
       const clean = Object.fromEntries(Object.entries(p).filter(([,v]) => v !== ''))
       const res   = await api.products.list(clean)
+      if (id !== loadIdRef.current) return
       setProducts(res.data || [])
       setMeta(res.meta || null)
     } catch (e) {
       console.error(e)
     } finally {
-      setLoading(false)
+      if (id === loadIdRef.current) setLoading(false)
     }
   }
 
-  useEffect(() => { load() }, [])
+  useEffect(() => { load(paramsRef.current) }, [])
 
   const update = (changes) => {
-    const next = { ...params, ...changes, page: changes.page ?? 1 }
+    const next = { ...paramsRef.current, ...changes, page: changes.page ?? 1 }
     setParams(next)
     load(next)
   }
@@ -43,7 +49,7 @@ export default function ProductsPage() {
     setDeleting(product.id)
     try {
       await api.products.delete(product.id)
-      load()
+      load(paramsRef.current)
     } catch (e) {
       alert(e.message)
     } finally {
@@ -87,7 +93,7 @@ export default function ProductsPage() {
           </select>
           <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none" />
         </div>
-        <button onClick={() => load()} className="flex items-center gap-2 text-gray-400 hover:text-white text-sm px-3 py-2 rounded-xl hover:bg-white/5 transition-colors">
+        <button onClick={() => load(paramsRef.current)} className="flex items-center gap-2 text-gray-400 hover:text-white text-sm px-3 py-2 rounded-xl hover:bg-white/5 transition-colors">
           <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
         </button>
       </div>

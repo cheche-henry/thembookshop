@@ -15,8 +15,10 @@ export function useFilters(initialSearch = '', initialCategory = 'all') {
 
   const debounceRef = useRef(null)
   const mountedRef  = useRef(false)
+  const fetchIdRef  = useRef(0)
 
   const fetchProducts = useCallback(async (params) => {
+    const id = ++fetchIdRef.current
     setLoading(true)
     setError(null)
     try {
@@ -30,13 +32,16 @@ export function useFilters(initialSearch = '', initialCategory = 'all') {
 
       const res  = await fetch(`${API_BASE}/api/v1/products?${query}`)
       const data = await res.json()
+      if (!res.ok) throw new Error(data.message || `HTTP ${res.status}`)
+      if (id !== fetchIdRef.current) return
       setProducts(data.data || [])
       setMeta(data.meta || null)
     } catch (e) {
+      if (id !== fetchIdRef.current) return
       setError('Could not load products. Is the API running?')
       console.error(e)
     } finally {
-      setLoading(false)
+      if (id === fetchIdRef.current) setLoading(false)
     }
   }, [])
 

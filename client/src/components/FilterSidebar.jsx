@@ -1,22 +1,32 @@
 import { X, SlidersHorizontal } from 'lucide-react'
 
 const categories = [
-  { id:'all', label:'All Products' }, { id:'Textbooks', label:'Textbooks' }, { id:'Revision Books', label:'Revision Books' },
-  { id:'Storybooks', label:'Storybooks' }, { id:'Exercise Books', label:'Exercise Books' },
-  { id:'Pens & Pencils', label:'Pens & Pencils' }, { id:'Geometry Sets', label:'Geometry Sets' },
-  { id:'Rulers', label:'Rulers' }, { id:'School Bags', label:'School Bags' },
+  { id:'all', label:'All Products' }, { id:'Textbooks', label:'Textbooks' },
+  { id:'Revision Books', label:'Revision Books' }, { id:'Storybooks', label:'Storybooks' },
+  { id:'Exercise Books', label:'Exercise Books' }, { id:'Pens & Pencils', label:'Pens & Pencils' },
+  { id:'Geometry Sets', label:'Geometry Sets' }, { id:'Rulers', label:'Rulers' },
+  { id:'School Bags', label:'School Bags' }, { id:'Stationery', label:'Stationery' },
 ]
 const classLevels = [
-  { id:'all', label:'All Levels' }, { id:'Grade 1', label:'Grade 1' }, { id:'Grade 2', label:'Grade 2' },
-  { id:'Grade 3', label:'Grade 3' }, { id:'Grade 4', label:'Grade 4' }, { id:'Grade 5', label:'Grade 5' },
-  { id:'Grade 6', label:'Grade 6' }, { id:'Form 1', label:'Form 1' }, { id:'Form 2', label:'Form 2' },
+  { id:'all', label:'All Levels' },
+  { id:'PP1', label:'PP1' }, { id:'PP2', label:'PP2' },
+  { id:'Grade 1', label:'Grade 1' }, { id:'Grade 2', label:'Grade 2' },
+  { id:'Grade 3', label:'Grade 3' }, { id:'Grade 4', label:'Grade 4' },
+  { id:'Grade 5', label:'Grade 5' }, { id:'Grade 6', label:'Grade 6' },
+  { id:'Grade 7', label:'Grade 7' }, { id:'Grade 8', label:'Grade 8' },
+  { id:'Grade 9', label:'Grade 9' }, { id:'Grade 10', label:'Grade 10' },
+  { id:'Form 1', label:'Form 1' }, { id:'Form 2', label:'Form 2' },
   { id:'Form 3', label:'Form 3' }, { id:'Form 4', label:'Form 4' },
 ]
 const subjects = [
-  { id:'all', label:'All Subjects' }, { id:'Mathematics', label:'Mathematics' }, { id:'English', label:'English' },
-  { id:'Science', label:'Science' }, { id:'Kiswahili', label:'Kiswahili' }, { id:'Biology', label:'Biology' },
-  { id:'Chemistry', label:'Chemistry' }, { id:'Physics', label:'Physics' }, { id:'Geography', label:'Geography' },
-  { id:'History', label:'History' }, { id:'Social Studies', label:'Social Studies' }, { id:'Creative Arts', label:'Creative Arts' },
+  { id:'all', label:'All Subjects' }, { id:'Mathematics', label:'Mathematics' },
+  { id:'English', label:'English' }, { id:'Kiswahili', label:'Kiswahili' },
+  { id:'Science', label:'Science' }, { id:'Biology', label:'Biology' },
+  { id:'Chemistry', label:'Chemistry' }, { id:'Physics', label:'Physics' },
+  { id:'Geography', label:'Geography' }, { id:'History', label:'History' },
+  { id:'Social Studies', label:'Social Studies' }, { id:'Creative Arts', label:'Creative Arts' },
+  { id:'CRE', label:'CRE' }, { id:'Agriculture', label:'Agriculture' },
+  { id:'Pre-Technical', label:'Pre-Technical' }, { id:'Business', label:'Business' },
 ]
 
 function FilterGroup({ title, options, value, onChange }) {

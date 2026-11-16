@@ -18,7 +18,7 @@ class CreatePayments < ActiveRecord::Migration[7.1]
       t.datetime :mpesa_transaction_date
 
       # Raw callback payload for audit
-      t.jsonb   :raw_callback
+      t.jsonb :raw_callback
 
       t.timestamps
     end

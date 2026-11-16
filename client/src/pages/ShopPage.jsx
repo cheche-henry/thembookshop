@@ -117,20 +117,38 @@ export default function ShopPage() {
 
               {/* Pagination */}
               {meta && meta.total_pages > 1 && (
-                <div className="flex justify-center gap-2 mt-8">
-                  {Array.from({ length: meta.total_pages }, (_, i) => i + 1).map((p) => (
-                    <button
-                      key={p}
-                      onClick={() => setPage(p)}
-                      className={`w-9 h-9 rounded-xl text-sm font-semibold transition-all ${
-                        p === page
-                          ? 'bg-brand-500 text-white shadow-sm'
-                          : 'text-gray-500 hover:bg-gray-100'
-                      }`}
-                    >
-                      {p}
-                    </button>
-                  ))}
+                <div className="flex flex-wrap justify-center items-center gap-2 mt-8">
+                  <button
+                    onClick={() => setPage(Math.max(1, page - 1))}
+                    disabled={page <= 1}
+                    className="px-3 h-9 rounded-xl text-sm font-semibold text-gray-500 hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                  >
+                    Prev
+                  </button>
+                  {pageWindow(page, meta.total_pages).map((p, i) =>
+                    p === '…' ? (
+                      <span key={`gap-${i}`} className="w-6 text-center text-gray-400 text-sm">…</span>
+                    ) : (
+                      <button
+                        key={p}
+                        onClick={() => setPage(p)}
+                        className={`w-9 h-9 rounded-xl text-sm font-semibold transition-all ${
+                          p === page
+                            ? 'bg-brand-500 text-white shadow-sm'
+                            : 'text-gray-500 hover:bg-gray-100'
+                        }`}
+                      >
+                        {p}
+                      </button>
+                    )
+                  )}
+                  <button
+                    onClick={() => setPage(Math.min(meta.total_pages, page + 1))}
+                    disabled={page >= meta.total_pages}
+                    className="px-3 h-9 rounded-xl text-sm font-semibold text-gray-500 hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                  >
+                    Next
+                  </button>
                 </div>
               )}
             </>
@@ -139,6 +157,21 @@ export default function ShopPage() {
       </div>
     </div>
   )
+}
+
+// Compact pagination: 1 … 4 5 6 … 20
+function pageWindow(current, total) {
+  if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1)
+
+  const pages = new Set([1, total, current, current - 1, current + 1])
+  const list = [...pages].filter(p => p >= 1 && p <= total).sort((a, b) => a - b)
+
+  const result = []
+  list.forEach((p, i) => {
+    if (i > 0 && p - list[i - 1] > 1) result.push('…')
+    result.push(p)
+  })
+  return result
 }
 
 function Chip({ label, onRemove }) {

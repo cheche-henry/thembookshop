@@ -12,10 +12,10 @@ class OrderItem < ApplicationRecord
   private
 
   def set_prices_and_snapshot
-    if product.present?
-      self.unit_price            = product.price
-      self.total_price           = unit_price * quantity.to_i
-      self.product_name_snapshot = product.name
-    end
+    return unless product.present?
+
+    self.unit_price            = product.price
+    self.total_price           = unit_price * quantity.to_i
+    self.product_name_snapshot = product.name
   end
 end

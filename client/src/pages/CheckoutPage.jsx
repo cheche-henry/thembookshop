@@ -13,6 +13,12 @@ const LOCATIONS = [
   'Machakos','Meru','Garissa','Kakamega','Other (specify in notes)',
 ]
 
+const newIdempotencyKey = () => (
+  typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+    ? crypto.randomUUID()
+    : `${Date.now()}-${Math.random().toString(16).slice(2)}`
+)
+
 export default function CheckoutPage() {
   const items     = useCartStore((s) => s.items)
   const clearCart = useCartStore((s) => s.clearCart)
@@ -24,35 +30,62 @@ export default function CheckoutPage() {
   const [apiError, setApiErr] = useState('')
   const [order, setOrder]   = useState(null)
 
-  // Fetch fresh prices from API so cart prices aren't stale
+  const itemIds = items.map(i => i.id).join(',')
+  const idempotencyKey = newIdempotencyKey()
+  const [submitKey, setSubmitKey] = useState(idempotencyKey)
+
+  // A new cart means a genuinely new order; only retries of the same cart
+  // reuse the idempotency key.
+  useEffect(() => { setSubmitKey(newIdempotencyKey()) }, [itemIds])
+
+  // Fetch fresh prices from the API so the summary isn't based on stale
+  // localStorage data. Only the products actually in the cart are requested.
   useEffect(() => {
-    if (items.length === 0) return
+    if (!itemIds) return
     let cancelled = false
-    fetch(`${API_BASE}/api/v1/products?per_page=100`)
+    fetch(`${API_BASE}/api/v1/products?ids=${encodeURIComponent(itemIds)}&per_page=100`)
       .then(r => r.json())
       .then(data => {
         if (cancelled) return
         const map = {}
-        ;(data.data || []).forEach(p => { map[p.id] = p.price })
+        ;(data.data || []).forEach(p => { map[p.id] = p })
         setFreshPrices(map)
       })
       .catch(() => {}) // fall back to cart prices on network error
     return () => { cancelled = true }
-  }, [items.length])
+  }, [itemIds])
 
-  const price = (item) => (freshPrices && freshPrices[item.id] != null ? freshPrices[item.id] : item.price)
+  const snapshot = (item) => freshPrices?.[item.id]
+  const price = (item) => (snapshot(item)?.price ?? item.price)
+  const stock = (item) => {
+    const fresh = snapshot(item)
+    const value = Number(fresh?.stock_quantity ?? item.stock_quantity)
+    return Number.isFinite(value) ? value : null
+  }
   const total = items.reduce((sum, i) => sum + price(i) * i.quantity, 0)
 
   if (items.length === 0 && !order) return <EmptyCart />
   if (order) return <OrderConfirmation order={order} phone={form.phone} />
 
+  const normalizePhone = (value) => value.replace(/[\s\-()]/g, '')
+
   const validate = () => {
     const e = {}
     if (!form.fullName.trim()) e.fullName = 'Full name is required'
-    if (!form.phone.trim())    e.phone    = 'Phone number is required'
-    else if (!/^(07|01|\+2547|\+2541)\d{8}$/.test(form.phone.replace(/\s/g, '')))
+
+    const phone = normalizePhone(form.phone)
+    if (!phone) e.phone = 'Phone number is required'
+    else if (!/^(07|01|\+2547|\+2541|2547|2541)\d{8}$/.test(phone))
       e.phone = 'Enter a valid Kenyan number (e.g. 0712345678)'
-    if (!form.location)        e.location = 'Please select your delivery location'
+
+    if (form.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim()))
+      e.email = 'Enter a valid email address'
+
+    if (!form.location) e.location = 'Please select your delivery location'
+
+    const outOfStock = items.find(i => { const s = stock(i); return s !== null && s < i.quantity })
+    if (outOfStock) e.cart = `Only ${stock(outOfStock)} of "${outOfStock.name}" available. Please update your cart.`
+
     return e
   }
 
@@ -65,12 +98,15 @@ export default function CheckoutPage() {
     try {
       const res = await fetch(`${API_BASE}/api/v1/orders`, {
         method:  'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Idempotency-Key': submitKey,
+        },
         body: JSON.stringify({
           order: {
             customer_name:     form.fullName,
-            customer_phone:    form.phone,
-            customer_email:    form.email,
+            customer_phone:    normalizePhone(form.phone),
+            customer_email:    form.email.trim(),
             delivery_address:  form.location,
             delivery_location: form.location,
             notes:             form.notes,
@@ -81,7 +117,7 @@ export default function CheckoutPage() {
       const data = await res.json()
       if (!res.ok || !data.success) throw new Error(data.message || 'Order failed')
       clearCart()
-      setOrder({ ...data.data.order, mpesa_sent: data.data.mpesa_sent, mpesa_message: data.data.mpesa_message })
+      setOrder({ ...data.data.order, phone: normalizePhone(form.phone), mpesa_sent: data.data.mpesa_sent, mpesa_message: data.data.mpesa_message })
     } catch (err) {
       setApiErr(err.message || 'Something went wrong. Please try again.')
     } finally {
@@ -114,9 +150,9 @@ export default function CheckoutPage() {
         </div>
       </div>
 
-      {apiError && (
+      {(apiError || errors.cart) && (
         <div className="flex items-center gap-3 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl mb-6 text-sm">
-          <AlertCircle className="w-4 h-4 flex-shrink-0" /> {apiError}
+          <AlertCircle className="w-4 h-4 flex-shrink-0" /> {apiError || errors.cart}
         </div>
       )}
 
@@ -163,13 +199,13 @@ export default function CheckoutPage() {
                   </div>
                 </Field>
 
-                <Field label="Email Address (optional)" hint="We'll send your order confirmation here once payment is complete">
+                <Field label="Email Address (optional)" error={errors.email} hint="We'll send your order confirmation here once payment is complete">
                   <input
-                    className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-gray-800 text-sm focus:outline-none focus:ring-2 focus:ring-green-400 transition-all"
+                    className={`w-full border rounded-xl px-4 py-2.5 text-gray-800 text-sm focus:outline-none focus:ring-2 focus:ring-green-400 transition-all ${errors.email ? 'border-red-300 bg-red-50' : 'border-gray-200'}`}
                     placeholder="your@email.com"
                     type="email"
                     value={form.email}
-                    onChange={e => setForm({...form, email: e.target.value})}
+                    onChange={e => { setForm({...form, email: e.target.value}); setErrors({...errors, email: ''}) }}
                   />
                 </Field>
 
@@ -284,6 +320,31 @@ function EmptyCart() {
 }
 
 function OrderConfirmation({ order, phone }) {
+  const [resending, setResending] = useState(false)
+  const [promptSent, setPromptSent] = useState(Boolean(order.mpesa_sent))
+  const [message, setMessage] = useState(order.mpesa_message || '')
+
+  const resendPrompt = async () => {
+    setResending(true)
+    setMessage('')
+    try {
+      const res = await fetch(`${API_BASE}/api/v1/payments/mpesa`, {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ order_reference: order.reference, phone: order.phone || phone }),
+      })
+      const data = await res.json()
+      if (!res.ok || !data.success) throw new Error(data.message || 'Could not send the M-Pesa prompt')
+      setPromptSent(true)
+      setMessage(data.data?.message || 'M-Pesa prompt sent.')
+    } catch (err) {
+      setPromptSent(false)
+      setMessage(err.message || 'Could not send the M-Pesa prompt')
+    } finally {
+      setResending(false)
+    }
+  }
+
   return (
     <div className="max-w-lg mx-auto px-4 py-16 text-center page-enter">
       <div className="bg-white rounded-2xl shadow-sm p-8">
@@ -294,8 +355,11 @@ function OrderConfirmation({ order, phone }) {
           Check Your Phone!
         </h2>
         <p className="text-gray-500 mb-4 text-sm leading-relaxed">
-          An M-Pesa payment request has been sent to <strong className="text-gray-800">{phone}</strong>.
-          Open your phone and enter your M-Pesa PIN to complete payment.
+          {promptSent
+            ? <>An M-Pesa payment request has been sent to <strong className="text-gray-800">{order.phone || phone}</strong>.</>
+            : <>We could not send the M-Pesa prompt to <strong className="text-gray-800">{order.phone || phone}</strong>.</>
+          }
+          {' '}Open your phone and enter your M-Pesa PIN to complete payment.
         </p>
 
         <div className="bg-gray-50 rounded-xl p-4 mb-5">
@@ -304,15 +368,26 @@ function OrderConfirmation({ order, phone }) {
         </div>
 
         <div className={`flex items-center justify-center gap-2 text-sm px-4 py-3 rounded-xl mb-5 ${
-          order.mpesa_sent
+          promptSent
             ? 'bg-green-50 text-green-700 border border-green-200'
             : 'bg-amber-50 text-amber-700 border border-amber-200'
         }`}>
-          {order.mpesa_sent
-            ? <><CheckCircle className="w-4 h-4 flex-shrink-0" /> M-Pesa prompt sent successfully</>
-            : <><AlertCircle className="w-4 h-4 flex-shrink-0" /> {order.mpesa_message}</>
+          {promptSent
+            ? <><CheckCircle className="w-4 h-4 flex-shrink-0" /> {message || 'M-Pesa prompt sent successfully'}</>
+            : <><AlertCircle className="w-4 h-4 flex-shrink-0" /> {message || 'Payment prompt was not sent'}</>
           }
         </div>
+
+        {!promptSent && (
+          <button
+            onClick={resendPrompt}
+            disabled={resending}
+            className="w-full mb-5 bg-amber-500 hover:bg-amber-600 text-white font-bold py-3 rounded-xl transition-colors disabled:opacity-60"
+            style={{fontFamily:'Nunito,sans-serif'}}
+          >
+            {resending ? 'Sending…' : 'Resend M-Pesa Prompt'}
+          </button>
+        )}
 
         <div className="text-left bg-blue-50 rounded-xl p-4 mb-6 text-sm space-y-2">
           <p className="font-bold text-blue-800 mb-2" style={{fontFamily:'Nunito,sans-serif'}}>After you pay:</p>

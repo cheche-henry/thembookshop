@@ -57,6 +57,19 @@ export default function ProductFormPage() {
   const handleImage = (e) => {
     const file = e.target.files?.[0]
     if (!file) return
+
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+      setErrors(prev => ({ ...prev, image: 'Image must be a JPEG, PNG or WebP file' }))
+      e.target.value = ''
+      return
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setErrors(prev => ({ ...prev, image: 'Image must be smaller than 5MB' }))
+      e.target.value = ''
+      return
+    }
+
+    setErrors(prev => ({ ...prev, image: null }))
     setImageFile(file)
     setImgPrev(URL.createObjectURL(file))
   }
@@ -252,6 +265,7 @@ export default function ProductFormPage() {
             </button>
           )}
           <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp" onChange={handleImage} className="hidden" />
+          {errors.image && <p className="text-xs text-red-400">{errors.image}</p>}
 
           {!imagePreview && !existingImage && (
             <button type="button" onClick={() => fileRef.current?.click()} className="text-sm text-green-400 hover:text-green-300 flex items-center gap-1">

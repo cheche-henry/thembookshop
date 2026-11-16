@@ -4,7 +4,7 @@ React SPA for Kenya's school supply e-commerce store. Built with Vite, Tailwind 
 
 ## Prerequisites
 
-- Node.js 18+, npm
+- Node.js 20+, npm
 
 ## Setup
 
@@ -93,6 +93,8 @@ src/
 
 - **Image fallback**: All product images gracefully degrade to a BookOpen icon on load error
 - **Fresh prices**: Checkout fetches current product prices from the API to avoid stale localStorage data
+- **Idempotent checkout**: A failed checkout retry reuses the same `Idempotency-Key`, so the API never creates a duplicate order
+- **Expired sessions**: The admin client drops the stored JWT and redirects to `/admin/login` on a 401
 - **Cancelled fetches**: Product detail page uses a `cancelled` flag to prevent state updates after unmount
 - **Debounced search**: Filter search debounces at 350ms; category/level/subject changes fire instantly
 - **Error boundary**: Top-level ErrorBoundary catches render crashes with a recovery UI

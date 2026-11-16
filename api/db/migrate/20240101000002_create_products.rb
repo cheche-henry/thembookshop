@@ -1,7 +1,7 @@
 class CreateProducts < ActiveRecord::Migration[7.1]
   def change
     create_table :products do |t|
-      t.string  :name,           null: false
+      t.string  :name, null: false
       t.text    :description
       t.decimal :price,          null: false, precision: 10, scale: 2
       t.string  :category,       null: false
@@ -10,7 +10,7 @@ class CreateProducts < ActiveRecord::Migration[7.1]
       t.integer :stock_quantity, null: false, default: 0
       t.boolean :active,         null: false, default: true
       t.string  :badge
-      t.integer :sort_order,     default: 0
+      t.integer :sort_order, default: 0
 
       t.timestamps
     end
@@ -18,6 +18,6 @@ class CreateProducts < ActiveRecord::Migration[7.1]
     add_index :products, :class_level
     add_index :products, :subject
     add_index :products, :active
-    add_index :products, [:category, :active]
+    add_index :products, %i[category active]
   end
 end

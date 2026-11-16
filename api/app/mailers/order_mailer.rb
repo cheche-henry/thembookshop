@@ -1,12 +1,12 @@
 class OrderMailer < ApplicationMailer
   # ── Customer confirmation ─────────────────────────────────────────────────
   def order_confirmation(order)
-    @order      = order
+    @order = order
     @order_items = order.order_items.includes(:product)
     @frontend_url = ENV.fetch("FRONTEND_URL", "https://thembookshop.co.ke")
 
     mail(
-      to:      @order.customer_email,
+      to: @order.customer_email,
       subject: "Order Confirmed – #{@order.reference} | Them Bookshop"
     )
   end
@@ -18,7 +18,7 @@ class OrderMailer < ApplicationMailer
     @admin_url   = ENV.fetch("ADMIN_URL", "http://localhost:3001/admin")
 
     mail(
-      to:      ENV.fetch("ADMIN_EMAIL_NOTIFY", "admin@thembookshop.co.ke"),
+      to: ENV.fetch("ADMIN_EMAIL_NOTIFY", "admin@thembookshop.co.ke"),
       subject: "[NEW ORDER] #{@order.reference} – KES #{@order.total_amount} – Them Bookshop"
     )
   end
@@ -28,19 +28,23 @@ class OrderMailer < ApplicationMailer
     @order   = order
     @payment = order.active_payment
 
+    return unless @order.customer_email.present?
+
     mail(
-      to:      @order.customer_email,
+      to: @order.customer_email,
       subject: "Payment Received – #{@order.reference} | Them Bookshop"
-    ) if @order.customer_email.present?
+    )
   end
 
   # ── Order status update ───────────────────────────────────────────────────
   def order_status_update(order)
     @order = order
 
+    return unless @order.customer_email.present?
+
     mail(
-      to:      @order.customer_email,
+      to: @order.customer_email,
       subject: "Your Order #{@order.reference} is #{@order.status.humanize} | Them Bookshop"
-    ) if @order.customer_email.present?
+    )
   end
 end

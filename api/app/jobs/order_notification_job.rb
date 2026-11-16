@@ -1,5 +1,6 @@
-# Sends order emails asynchronously via Sidekiq
-# Enqueued by: OrdersController#create, PaymentsController#callback
+# Sends order emails asynchronously via Sidekiq.
+# Enqueued by: PaymentsController#callback and MpesaStatusCheckJob after payment
+# confirmation, and by admin status changes.
 class OrderNotificationJob < ApplicationJob
   queue_as :mailers
   sidekiq_options retry: 3, dead: true
@@ -7,6 +8,8 @@ class OrderNotificationJob < ApplicationJob
   VALID_EVENTS = %w[order_placed payment_received order_status_update].freeze
 
   def perform(order_id, event)
+    return unless VALID_EVENTS.include?(event.to_s)
+
     order = Order.includes(:order_items, :payments).find(order_id)
 
     case event

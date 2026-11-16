@@ -9,12 +9,12 @@ import Modal from '../components/Modal'
 const fmt = (n) => `KES ${Number(n || 0).toLocaleString('en-KE')}`
 
 const TRANSITIONS = {
-  pending:           ['payment_initiated', 'cancelled'],
+  pending:           ['payment_initiated', 'paid', 'failed', 'cancelled'],
   payment_initiated: ['paid', 'failed', 'cancelled'],
   paid:              ['processing', 'cancelled'],
-  processing:        ['completed'],
+  processing:        ['completed', 'cancelled'],
   completed:         [],
-  failed:            ['pending'],
+  failed:            ['pending', 'cancelled'],
   cancelled:         [],
 }
 

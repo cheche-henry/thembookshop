@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import {
   ShoppingBag, TrendingUp, Package, AlertTriangle,
   Clock, CheckCircle, XCircle, DollarSign, ArrowRight, RefreshCw
@@ -12,6 +12,7 @@ import { Table, Th, Td, Tr } from '../components/AdminTable'
 const fmt = (n) => `KES ${Number(n || 0).toLocaleString('en-KE')}`
 
 export default function DashboardPage() {
+  const navigate                  = useNavigate()
   const [stats, setStats]         = useState(null)
   const [recentOrders, setRecent] = useState([])
   const [lowStock, setLowStock]   = useState([])
@@ -115,7 +116,7 @@ export default function DashboardPage() {
               ) : recentOrders.length === 0 ? (
                 <Tr><Td colSpan={4} className="text-center text-gray-600 py-8">No orders yet</Td></Tr>
               ) : recentOrders.map(order => (
-                <Tr key={order.id} onClick={() => window.location.href = `/admin/orders/${order.id}`}>
+                <Tr key={order.id} onClick={() => navigate(`/admin/orders/${order.id}`)}>
                   <Td><span className="font-mono text-xs text-green-400">{order.reference}</span></Td>
                   <Td>
                     <p className="text-white text-sm font-medium">{order.customer_name}</p>

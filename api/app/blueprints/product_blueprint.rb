@@ -4,9 +4,7 @@ class ProductBlueprint < Blueprinter::Base
   fields :name, :description, :price, :category, :class_level, :subject,
          :stock_quantity, :active, :badge, :sort_order, :created_at, :updated_at
 
-  field :in_stock do |product|
-    product.in_stock?
-  end
+  field :in_stock, &:in_stock?
 
   field :image_url do |product, options|
     host = options[:host] || Rails.application.config.x.app_host

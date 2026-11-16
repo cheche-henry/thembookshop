@@ -56,6 +56,13 @@ export function useFilters(initialSearch = '', initialCategory = 'all') {
     return () => clearTimeout(debounceRef.current)
   }, [search, category, classLevel, subject, page])
 
+  // Any filter change starts a new result set, so the page has to go back to 1
+  // (otherwise page 5 of the previous filters is requested and often empty).
+  const changeFilter = (setter) => (value) => {
+    setter(value)
+    setPage(1)
+  }
+
   const reset = () => {
     setSearch('')
     setCategory('all')
@@ -65,10 +72,10 @@ export function useFilters(initialSearch = '', initialCategory = 'all') {
   }
 
   return {
-    search, setSearch,
-    category, setCategory,
-    classLevel, setClassLevel,
-    subject, setSubject,
+    search, setSearch: changeFilter(setSearch),
+    category, setCategory: changeFilter(setCategory),
+    classLevel, setClassLevel: changeFilter(setClassLevel),
+    subject, setSubject: changeFilter(setSubject),
     products,
     loading,
     error,

@@ -1,19 +1,22 @@
 module Admin
   class ProductsController < ApplicationController
+    MAX_PER_PAGE = 100
+
     before_action :authenticate_admin!
-    before_action :set_product, only: [:show, :update, :destroy, :upload_image, :remove_image]
+    before_action :set_product, only: %i[show update destroy upload_image remove_image restock]
 
     # GET /admin/products
     def index
       products = Product
+                 .with_attached_image
                  .by_category(params[:category])
                  .search(params[:q])
                  .order(created_at: :desc)
                  .page(params[:page])
-                 .per(params[:per_page] || 25)
+                 .per(per_page)
 
       # Include inactive products for admin
-      products = products.where(active: params[:active]) if params[:active].present?
+      products = products.where(active: ActiveModel::Type::Boolean.new.cast(params[:active])) if params[:active].present?
 
       render_success(
         ProductBlueprint.render_as_hash(products, view: :admin, host: request.base_url),
@@ -28,10 +31,13 @@ module Admin
 
     # POST /admin/products
     def create
+      image = params.dig(:product, :image)
+      return render_error(image_error_message, status: :unprocessable_entity) if image.present? && !valid_image_upload?(image)
+
       product = Product.new(product_params)
+      product.image.attach(image) if image.present?
 
       if product.save
-        attach_image(product) if params[:product][:image].present?
         render_created(
           ProductBlueprint.render_as_hash(product, view: :admin, host: request.base_url),
           message: "Product '#{product.name}' created"
@@ -43,8 +49,13 @@ module Admin
 
     # PATCH /admin/products/:id
     def update
-      if @product.update(product_params)
-        attach_image(@product) if params[:product][:image].present?
+      image = params.dig(:product, :image)
+      return render_error(image_error_message, status: :unprocessable_entity) if image.present? && !valid_image_upload?(image)
+
+      @product.assign_attributes(product_params)
+      attach_image(@product) if image.present?
+
+      if @product.save
         render_success(
           ProductBlueprint.render_as_hash(@product, view: :admin, host: request.base_url),
           message: "Product updated"
@@ -67,26 +78,30 @@ module Admin
       end
     end
 
-    # POST /admin/products/:id/image  (multipart/form-data)
+    # POST /admin/products/:id/upload_image  (multipart/form-data)
     def upload_image
-      if params[:image].blank?
-        return render_error("No image file provided", status: :bad_request)
-      end
+      file = params[:image]
 
+      return render_error("No image file provided", status: :bad_request) if file.blank?
+
+      return render_error(image_error_message, status: :unprocessable_entity) unless valid_image_upload?(file)
+
+      # Only replace the existing image once the new file has passed validation.
       @product.image.purge if @product.image.attached?
-      @product.image.attach(params[:image])
+      @product.image.attach(file)
 
-      if @product.image.attached? && @product.valid?
+      if @product.save
         render_success(
           { image_url: @product.image_url(host: request.base_url) },
           message: "Image uploaded"
         )
       else
+        @product.image.purge if @product.image.attached?
         render_error("Image upload failed", errors: @product.errors.full_messages)
       end
     end
 
-    # DELETE /admin/products/:id/image
+    # DELETE /admin/products/:id/remove_image
     def remove_image
       @product.image.purge if @product.image.attached?
       render_success({}, message: "Image removed")
@@ -94,8 +109,9 @@ module Admin
 
     # GET /admin/products/low_stock
     def low_stock
-      threshold = params[:threshold]&.to_i || 5
-      products  = Product.active.where("stock_quantity <= ?", threshold).order(:stock_quantity)
+      threshold = [params[:threshold].to_i, 0].max
+      threshold = 5 if threshold.zero?
+      products  = Product.active.with_attached_image.where("stock_quantity <= ?", threshold).order(:stock_quantity)
       render_success(ProductBlueprint.render_as_hash(products, view: :admin, host: request.base_url))
     end
 
@@ -117,6 +133,12 @@ module Admin
       @product = Product.find(params[:id])
     end
 
+    def per_page
+      value = params[:per_page].to_i
+      value = 25 unless value.positive?
+      [value, MAX_PER_PAGE].min
+    end
+
     def product_params
       params.require(:product).permit(
         :name, :description, :price, :category, :class_level,
@@ -126,6 +148,15 @@ module Admin
 
     def attach_image(product)
       product.image.attach(params[:product][:image])
+    end
+
+    def image_error_message
+      "Image must be a JPEG, PNG or WebP file smaller than #{Product::MAX_IMAGE_BYTES / 1.megabyte}MB"
+    end
+
+    def valid_image_upload?(file)
+      Product::IMAGE_CONTENT_TYPES.include?(file.content_type.to_s) &&
+        file.size.to_i.between?(1, Product::MAX_IMAGE_BYTES)
     end
   end
 end

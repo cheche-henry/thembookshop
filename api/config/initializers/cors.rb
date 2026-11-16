@@ -1,8 +1,17 @@
+# Allowed browser origins for the storefront and admin SPA.
+origins = [ENV["CORS_ORIGINS"], ENV["FRONTEND_URL"]]
+          .compact
+          .join(",")
+          .split(",")
+          .map(&:strip)
+          .reject(&:blank?)
+          .uniq
+origins = ["http://localhost:5173"] if origins.empty?
+
 Rails.application.config.middleware.insert_before 0, Rack::Cors do
   allow do
-    origins ENV.fetch("CORS_ORIGINS", "http://localhost:5173,http://localhost:3001").split(",").map(&:strip)
-    resource "/api/*",   headers: :any, methods: [:get, :post, :put, :patch, :delete, :options, :head], credentials: false
-    resource "/admin/*", headers: :any, methods: [:get, :post, :put, :patch, :delete, :options, :head], credentials: false
-    resource "/api/v1/payments/callback", headers: :any, methods: [:post, :options]
+    origins(*origins)
+    resource "/api/*",   headers: :any, methods: %i[get post put patch delete options head], credentials: false
+    resource "/admin/*", headers: :any, methods: %i[get post put patch delete options head], credentials: false
   end
 end

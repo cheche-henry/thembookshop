@@ -1,7 +1,7 @@
 class CreateOrders < ActiveRecord::Migration[7.1]
   def change
     create_table :orders do |t|
-      t.string  :reference,        null: false  # e.g. TBS-20240101-0001
+      t.string  :reference,        null: false # e.g. TBS-20240101-0001
       t.string  :customer_name,    null: false
       t.string  :customer_phone,   null: false
       t.string  :customer_email

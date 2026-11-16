@@ -13,10 +13,10 @@ them-bookshop/
 ## Quick Start
 
 ### Prerequisites
-- Ruby 3.2.2, Bundler
-- Node.js 18+, npm
+- Ruby 3.3.4, Bundler
+- Node.js 20+, npm
 - PostgreSQL running
-- Redis running (for Sidekiq)
+- Redis running (for Sidekiq and rate limiting)
 
 ### API
 
@@ -39,8 +39,11 @@ npm run dev                # → http://localhost:5173
 
 ### Admin Panel
 
-Login at `http://localhost:5173/admin/login`
-- Default: `admin@thembookshop.co.ke` / `Admin@2025!`
+Login at `http://localhost:5173/admin/login`.
+
+The first admin account is created by `rails db:seed` from `ADMIN_EMAIL` and
+`ADMIN_PASSWORD` in `api/.env` (defaults live in `.env.example`). Change both
+before seeding anything other than a local development database.
 
 ### Background Jobs
 
@@ -55,6 +58,7 @@ bundle exec sidekiq        # processes email & M-Pesa status check jobs
 - Product detail page with related items
 - Cart persisted to localStorage via Zustand
 - Guest checkout with M-Pesa STK Push payments
+- Order lookup by reference + the phone number used at checkout
 - Order confirmation page with payment status
 
 ### Admin
@@ -67,8 +71,8 @@ bundle exec sidekiq        # processes email & M-Pesa status check jobs
 
 ### Payments
 - M-Pesa Daraja API integration (STK Push)
-- Callback handler with payment confirmation
-- Automatic stock restore on payment failure
+- Authenticated callback handler (shared token and/or IP allowlist)
+- Automatic stock restore on payment failure (idempotent)
 - Asynchronous M-Pesa status polling via Sidekiq
 
 ### Emails
@@ -97,6 +101,11 @@ Key variables — see `.env.example` for full list:
 | `DATABASE_URL` | PostgreSQL connection |
 | `JWT_SECRET` | Token signing key |
 | `MPESA_*` | Safaricom Daraja API credentials |
+| `MPESA_CALLBACK_URL` | Must be `https://<api-host>/api/v1/payments/callback` (append `?token=…` when `MPESA_CALLBACK_TOKEN` is set) |
+| `MPESA_CALLBACK_TOKEN` | Shared secret required on callbacks (strongly recommended) |
+| `MPESA_CALLBACK_IPS` | Optional comma-separated Safaricom source IPs |
 | `SMTP_*` | Email sending (Gmail app password) |
 | `CORS_ORIGINS` | Allowed frontend origins |
 | `FRONTEND_URL` | For email links and CORS |
+| `APP_HOST` | Public API base URL used for uploaded image URLs |
+| `ADMIN_EMAIL` / `ADMIN_PASSWORD` | First admin account created by the seed |

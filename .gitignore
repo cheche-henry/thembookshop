@@ -1,0 +1,29 @@
+# ── OS / editor noise ────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+*:Zone.Identifier
+.idea/
+.vscode/
+.ruby-lsp/
+*.swp
+
+# ── Secrets ──────────────────────────────────────────────────────────────────
+.env
+.env.*
+!.env.example
+api/config/master.key
+
+# ── Node / frontend build output ─────────────────────────────────────────────
+node_modules/
+client/dist/
+npm-debug.log*
+yarn-error.log*
+
+# ── Ruby / Rails ─────────────────────────────────────────────────────────────
+api/.bundle/
+api/log/*.log
+api/tmp/
+api/storage/
+api/public/assets/
+api/coverage/
+api/spec/examples.txt

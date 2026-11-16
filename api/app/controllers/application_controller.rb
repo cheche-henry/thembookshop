@@ -1,5 +1,6 @@
 class ApplicationController < ActionController::API
   include ActionController::HttpAuthentication::Token::ControllerMethods
+  include RateLimitable
 
   # ── Error handling ────────────────────────────────────────────────────────
   rescue_from ActiveRecord::RecordNotFound,        with: :handle_not_found
@@ -23,13 +24,12 @@ class ApplicationController < ActionController::API
     render_unauthorized(e.message)
   end
 
-  def current_admin
-    @current_admin
-  end
+  attr_reader :current_admin
 
   def extract_bearer_token
     header = request.headers["Authorization"]
     raise JsonWebToken::DecodeError, "Authorization header missing" unless header
+
     header.split(" ").last
   end
 
@@ -89,10 +89,10 @@ class ApplicationController < ActionController::API
   # ── Pagination helpers ────────────────────────────────────────────────────
   def pagination_meta(collection)
     {
-      current_page:  collection.current_page,
-      total_pages:   collection.total_pages,
-      total_count:   collection.total_count,
-      per_page:      collection.limit_value,
+      current_page: collection.current_page,
+      total_pages: collection.total_pages,
+      total_count: collection.total_count,
+      per_page: collection.limit_value
     }
   end
 end

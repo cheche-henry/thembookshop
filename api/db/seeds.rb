@@ -8,10 +8,18 @@
 puts "🌱 Seeding Them Bookshop..."
 
 # ── Admin ─────────────────────────────────────────────────────────────────────
+admin_password = ENV["ADMIN_PASSWORD"].presence
+if admin_password.blank?
+  if Rails.env.production?
+    raise "ADMIN_PASSWORD must be set before seeding in production"
+  end
+  admin_password = "Admin@2025!"
+end
+
 admin = AdminUser.find_or_initialize_by(email: ENV.fetch("ADMIN_EMAIL", "admin@thembookshop.co.ke"))
 admin.assign_attributes(
   name:     "Bookshop Admin",
-  password: ENV.fetch("ADMIN_PASSWORD", "Admin@2025!"),
+  password: admin_password,
   active:   true,
 )
 admin.save!
@@ -966,4 +974,4 @@ puts "📦 Total active products: #{Product.active.count}"
 puts "\n🎉 Them Bookshop seeded!"
 puts "\n📋 Admin:"
 puts "   Email:    #{admin.email}"
-puts "   Password: #{ENV.fetch('ADMIN_PASSWORD', 'Admin@2025!')}"
+puts "   Password: configured via ADMIN_PASSWORD in api/.env"

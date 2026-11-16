@@ -1,21 +1,25 @@
 module Admin
   class OrdersController < ApplicationController
+    MAX_PER_PAGE = 100
+
     before_action :authenticate_admin!
-    before_action :set_order, only: [:show, :update_status, :cancel]
+    before_action :set_order, only: %i[show update_status cancel]
 
     # GET /admin/orders
     def index
       orders = Order
-               .includes(:order_items, :payments)
+               .includes(:order_items, :payments, :products)
                .by_status(params[:status])
                .recent
                .page(params[:page])
-               .per(params[:per_page] || 20)
+               .per(per_page)
 
-      orders = orders.where("customer_name ILIKE :q OR customer_phone ILIKE :q OR reference ILIKE :q",
-                            q: "%#{params[:q]}%") if params[:q].present?
-      orders = orders.where("created_at >= ?", Date.parse(params[:from])) if params[:from].present?
-      orders = orders.where("created_at <= ?", Date.parse(params[:to]).end_of_day) if params[:to].present?
+      if params[:q].present?
+        orders = orders.where("customer_name ILIKE :q OR customer_phone ILIKE :q OR reference ILIKE :q",
+                              q: "%#{params[:q]}%")
+      end
+      orders = orders.where("created_at >= ?", parsed_date(params[:from]).beginning_of_day) if params[:from].present?
+      orders = orders.where("created_at <= ?", parsed_date(params[:to]).end_of_day) if params[:to].present?
 
       render_success(
         OrderBlueprint.render_as_hash(orders, view: :list),
@@ -25,7 +29,7 @@ module Admin
 
     # GET /admin/orders/:id
     def show
-      render_success(OrderBlueprint.render_as_hash(@order))
+      render_success(OrderBlueprint.render_as_hash(@order, view: :admin))
     end
 
     # PATCH /admin/orders/:id/status
@@ -33,43 +37,40 @@ module Admin
       new_status = params[:status]&.to_s
 
       unless Order::STATUSES.include?(new_status)
-        return render_error("Invalid status '#{new_status}'. Valid: #{Order::STATUSES.join(', ')}")
+        return render_error("Invalid status '#{new_status}'. Valid: #{Order::STATUSES.join(", ")}")
       end
 
-      @order.transition_to!(new_status)
+      OrderWorkflow.transition!(@order, new_status)
 
       # Notify customer on meaningful status changes
-      if new_status.in?(%w[completed processing])
-        OrderNotificationJob.perform_later(@order.id, "order_status_update")
-      end
+      enqueue_notification(@order.id, "order_status_update") if new_status.in?(%w[completed processing])
 
       render_success(
-        OrderBlueprint.render_as_hash(@order),
+        OrderBlueprint.render_as_hash(@order.reload, view: :admin),
         message: "Order #{@order.reference} moved to '#{new_status}'"
       )
-    rescue Order::InvalidTransitionError => e
+    rescue Order::InvalidTransitionError, Product::InsufficientStockError => e
       render_error(e.message, status: :unprocessable_entity)
     end
 
     # POST /admin/orders/:id/cancel
     def cancel
       reason = params[:reason]&.strip
-      unless @order.can_transition_to?("cancelled")
-        return render_error("Order cannot be cancelled in its current state (#{@order.status})")
-      end
+      return render_error("Order cannot be cancelled in its current state (#{@order.status})") unless @order.can_transition_to?("cancelled")
 
-      ActiveRecord::Base.transaction do
-        @order.transition_to!("cancelled")
-        # Restore stock for each item
-        @order.order_items.includes(:product).each do |item|
-          item.product.restore_stock!(item.quantity)
-        end
-        # Append cancellation note
-        @order.update!(notes: [@order.notes, "Cancelled by admin: #{reason}"].compact.join("\n"))
-      end
+      OrderWorkflow.transition!(
+        @order,
+        "cancelled",
+        reason: reason.present? ? "Cancelled by admin: #{reason}" : "Cancelled by admin"
+      )
 
-      OrderNotificationJob.perform_later(@order.id, "order_status_update")
-      render_success(OrderBlueprint.render_as_hash(@order), message: "Order cancelled and stock restored")
+      enqueue_notification(@order.id, "order_status_update")
+      render_success(
+        OrderBlueprint.render_as_hash(@order.reload, view: :admin),
+        message: "Order cancelled and stock restored"
+      )
+    rescue Order::InvalidTransitionError => e
+      render_error(e.message, status: :unprocessable_entity)
     end
 
     # GET /admin/orders/stats  — dashboard summary
@@ -78,33 +79,53 @@ module Admin
       this_month = Time.current.beginning_of_month
 
       render_success({
-        total_orders:          Order.count,
-        orders_today:          Order.where("created_at >= ?", today).count,
-        orders_this_month:     Order.where("created_at >= ?", this_month).count,
-        revenue_today:         Order.where("created_at >= ? AND status IN (?)", today, %w[paid processing completed]).sum(:total_amount),
-        revenue_this_month:    Order.where("created_at >= ? AND status IN (?)", this_month, %w[paid processing completed]).sum(:total_amount),
-        revenue_total:         Order.where(status: %w[paid processing completed]).sum(:total_amount),
-        pending_orders:        Order.where(status: "pending").count,
-        payment_initiated:     Order.where(status: "payment_initiated").count,
-        paid_orders:           Order.where(status: "paid").count,
-        processing_orders:     Order.where(status: "processing").count,
-        completed_orders:      Order.where(status: "completed").count,
-        failed_orders:         Order.where(status: "failed").count,
-        cancelled_orders:      Order.where(status: "cancelled").count,
-        low_stock_products:    Product.active.where("stock_quantity <= 5").count,
-        out_of_stock_products: Product.active.where(stock_quantity: 0).count,
-        total_products:        Product.active.count,
-      })
+                       total_orders: Order.count,
+                       orders_today: Order.where("created_at >= ?", today).count,
+                       orders_this_month: Order.where("created_at >= ?", this_month).count,
+                       revenue_today: Order.where("created_at >= ? AND status IN (?)", today,
+                                                  %w[paid processing completed]).sum(:total_amount),
+                       revenue_this_month: Order.where("created_at >= ? AND status IN (?)", this_month,
+                                                       %w[paid processing completed]).sum(:total_amount),
+                       revenue_total: Order.where(status: %w[paid processing completed]).sum(:total_amount),
+                       pending_orders: Order.where(status: "pending").count,
+                       payment_initiated: Order.where(status: "payment_initiated").count,
+                       paid_orders: Order.where(status: "paid").count,
+                       processing_orders: Order.where(status: "processing").count,
+                       completed_orders: Order.where(status: "completed").count,
+                       failed_orders: Order.where(status: "failed").count,
+                       cancelled_orders: Order.where(status: "cancelled").count,
+                       low_stock_products: Product.active.where("stock_quantity <= 5").count,
+                       out_of_stock_products: Product.active.where(stock_quantity: 0).count,
+                       total_products: Product.active.count
+                     })
     end
 
     private
 
     def set_order
-      @order = Order.includes(:order_items, :payments).find(params[:id])
+      @order = Order.includes(:payments, order_items: :product).find(params[:id])
+    end
+
+    def per_page
+      value = params[:per_page].to_i
+      value = 20 unless value.positive?
+      [value, MAX_PER_PAGE].min
+    end
+
+    def parsed_date(value)
+      Date.parse(value.to_s)
+    rescue Date::Error
+      Time.current.to_date
     end
 
     def status_counts
       Order.group(:status).count
+    end
+
+    def enqueue_notification(order_id, event)
+      OrderNotificationJob.perform_later(order_id, event)
+    rescue StandardError => e
+      Rails.logger.error "[Admin::OrdersController] Could not enqueue #{event} for order ##{order_id}: #{e.class}: #{e.message}"
     end
   end
 end

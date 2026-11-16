@@ -24,6 +24,15 @@ async function request(path, options = {}) {
   const res = await fetch(`${API_BASE}${path}`, { ...options, headers })
   const data = await res.json().catch(() => ({}))
 
+  // An expired or revoked token must not leave the admin UI in a half-logged-in
+  // state; drop the session and send them back to the login screen.
+  if (res.status === 401) {
+    localStorage.removeItem('tbsadmin-auth')
+    if (!window.location.pathname.startsWith('/admin/login')) {
+      window.location.replace('/admin/login')
+    }
+  }
+
   if (!res.ok) {
     const msg = data.message || data.error || `HTTP ${res.status}`
     throw new Error(msg)

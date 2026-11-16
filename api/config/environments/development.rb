@@ -11,7 +11,7 @@ Rails.application.configure do
     user_name: ENV["SMTP_USERNAME"],
     password: ENV["SMTP_PASSWORD"],
     authentication: :plain,
-    enable_starttls_auto: true,
+    enable_starttls_auto: true
   }
   config.action_mailer.default_url_options = { host: ENV.fetch("APP_HOST", "http://localhost:3000") }
   config.action_mailer.raise_delivery_errors = true

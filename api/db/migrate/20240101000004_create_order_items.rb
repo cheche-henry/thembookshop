@@ -6,10 +6,10 @@ class CreateOrderItems < ActiveRecord::Migration[7.1]
       t.integer :quantity,              null: false
       t.decimal :unit_price,            null: false, precision: 10, scale: 2
       t.decimal :total_price,           null: false, precision: 10, scale: 2
-      t.string  :product_name_snapshot, null: false  # preserve name even if product changes
+      t.string  :product_name_snapshot, null: false # preserve name even if product changes
 
       t.timestamps
     end
-    add_index :order_items, [:order_id, :product_id], unique: true
+    add_index :order_items, %i[order_id product_id], unique: true
   end
 end

@@ -18,7 +18,6 @@ module ThemBookshopApi
     config.api_only = true
 
     # CORS — configured in initializers/cors.rb
-    config.middleware.insert_before 0, Rack::Cors
 
     # Active Job queue adapter
     config.active_job.queue_adapter = :sidekiq

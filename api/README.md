@@ -4,7 +4,7 @@ Ruby on Rails 7.1 API-only backend for Kenya's school supply e-commerce store. H
 
 ## Prerequisites
 
-- Ruby 3.2.2
+- Ruby 3.3.4
 - Bundler
 - PostgreSQL (running)
 - Redis (running — for Sidekiq)
@@ -31,7 +31,9 @@ Key variables — see `.env.example` for all:
 | `MPESA_CONSUMER_SECRET` | Yes* | — | Daraja API consumer secret |
 | `MPESA_SHORTCODE` | Yes* | 174379 | Paybill/Till number |
 | `MPESA_PASSKEY` | Yes* | — | Daraja online passkey |
-| `MPESA_CALLBACK_URL` | Yes* | — | Public URL for M-Pesa callbacks |
+| `MPESA_CALLBACK_URL` | Yes* | — | Public URL for M-Pesa callbacks (`/api/v1/payments/callback`) |
+| `MPESA_CALLBACK_TOKEN` | Yes* | — | Shared secret validated on every callback (`?token=…` or `X-Callback-Token`) |
+| `MPESA_CALLBACK_IPS` | No | — | Optional comma-separated Safaricom source IP allowlist |
 | `MPESA_ENV` | No | sandbox | `sandbox` or `production` |
 | `SMTP_HOST` | No | smtp.gmail.com | SMTP server |
 | `SMTP_PORT` | No | 587 | SMTP port |
@@ -42,8 +44,11 @@ Key variables — see `.env.example` for all:
 | `FRONTEND_URL` | No | http://localhost:5173 | For email links and CORS |
 | `APP_HOST` | No | http://localhost:3000 | For Active Storage URL generation |
 | `CORS_ORIGINS` | No | localhost:5173 | Comma-separated allowed origins |
-| `REDIS_URL` | Yes* | redis://localhost:6379/0 | Sidekiq connection |
+| `REDIS_URL` | Yes* | redis://localhost:6379/0 | Sidekiq connection and cache-backed rate limiting |
+| `ACTIVE_STORAGE_SERVICE` | No | local | `local` or `amazon` (S3 / Cloudflare R2) |
 | `AWS_*` | No | — | S3 for production Active Storage (use R2 instead) |
+| `ADMIN_EMAIL` | No | admin@thembookshop.co.ke | First admin account created by `db:seed` |
+| `ADMIN_PASSWORD` | No | — | Password for that first admin account |
 
 \* Required for M-Pesa / Sidekiq in production
 † Required if sending emails
@@ -62,7 +67,7 @@ bundle exec sidekiq         # Background jobs (emails, M-Pesa status polling)
 ```bash
 rails db:create             # Create database
 rails db:migrate            # Run migrations
-rails db:seed               # Seed 30 products + admin user
+rails db:seed               # Seed the product catalogue + first admin user
 rails db:seed:replant       # Reset + re-seed
 ```
 
@@ -74,8 +79,8 @@ rails db:seed:replant       # Reset + re-seed
 |---|---|---|
 | `GET` | `/api/v1/products` | List products (filterable: `category`, `class_level`, `subject`, `q`) |
 | `GET` | `/api/v1/products/:id` | Single product |
-| `POST` | `/api/v1/orders` | Create order (triggers M-Pesa STK Push) |
-| `GET` | `/api/v1/orders/:reference` | Lookup order by reference |
+| `POST` | `/api/v1/orders` | Create order (triggers M-Pesa STK Push; honours `Idempotency-Key`) |
+| `GET` | `/api/v1/orders/:reference?phone=0712345678` | Lookup order; the phone used at checkout is required |
 | `POST` | `/api/v1/payments/mpesa` | Manual M-Pesa STK Push re-trigger |
 | `POST` | `/api/v1/payments/callback` | Safaricom M-Pesa callback webhook |
 
@@ -115,19 +120,25 @@ rails db:seed:replant       # Reset + re-seed
 
 ```
 pending → payment_initiated → paid → processing → completed
-                              ↓
-                          failed / cancelled
+   ↓             ↓              ↓        ↓
+ failed ←────────┘              └────────┴──→ cancelled
+   ↓
+pending (retry)
 ```
 
-- `cancelled` can transition from any state except `completed`
+- `pending`, `payment_initiated`, `paid` and `processing` can move to `cancelled`
 - Cancellation restores stock automatically
-- Failed payments restore stock automatically
+- Failed payments restore stock automatically; retrying a failed order re-reserves it
+- All stock restores are idempotent (`orders.stock_restored`) and go through `OrderWorkflow`
 
 ## Services
 
 | Service | File | Purpose |
 |---|---|---|
-| `OrderCreator` | `app/services/order_creator.rb` | Validates stock, creates order + items, deducts inventory (transactional) |
+| `OrderCreator` | `app/services/order_creator.rb` | Validates stock, creates order + items, deducts inventory (transactional, idempotency-aware) |
+| `OrderWorkflow` | `app/services/order_workflow.rb` | Single entry point for status transitions and their inventory side effects |
+| `OrderStock` | `app/services/order_stock.rb` | Idempotent stock restore/re-deduct guarded by a row lock |
+| `PhoneNumber` | `app/services/phone_number.rb` | Normalises Kenyan mobile numbers to `2547XXXXXXXX` |
 | `MpesaService` | `app/services/mpesa_service.rb` | Daraja OAuth + STK Push + status query (Faraday) |
 | `JsonWebToken` | `app/services/json_web_token.rb` | JWT encode/decode (HS256) |
 
@@ -135,8 +146,20 @@ pending → payment_initiated → paid → processing → completed
 
 | Job | Queue | Trigger |
 |---|---|---|
-| `OrderNotificationJob` | `mailers` | Order created, payment received, status update |
-| `MpesaStatusCheckJob` | `default` | Polls M-Pesa for pending payments (scheduled, retry 5x) |
+| `OrderNotificationJob` | `mailers` | Order placed, payment received, status update |
+| `MpesaStatusCheckJob` | `payments` | Polls M-Pesa for pending payments (up to 6 attempts, one minute apart) |
+
+## Security Notes
+
+- M-Pesa callbacks are authenticated with `MPESA_CALLBACK_TOKEN` (constant-time
+  comparison) and optionally restricted to `MPESA_CALLBACK_IPS`.
+- Payment amounts are reconciled against the order total before an order is
+  marked paid.
+- Public order lookup requires the checkout phone number and never returns
+  Daraja request identifiers or customer PII.
+- Login and STK-push endpoints are rate limited through the Rails cache.
+- `api/config/master.key` is git-ignored — never commit it. If it was ever
+  committed, rotate `SECRET_KEY_BASE` and the encrypted credentials.
 
 ## Tests
 

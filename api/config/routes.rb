@@ -6,16 +6,12 @@ Rails.application.routes.draw do
   namespace :api do
     namespace :v1 do
       # Products (read-only)
-      resources :products, only: [:index, :show]
+      resources :products, only: %i[index show]
 
       # Guest orders
-      resources :orders, only: [:create] do
-        member do
-          get "/", to: "orders#show"  # GET /api/v1/orders/:reference
-        end
-      end
-      # Allow looking up by reference string
-      get "/orders/:id", to: "api/v1/orders#show", as: :order_by_reference
+      resources :orders, only: [:create]
+      # Public order status lookup — requires the phone number used at checkout
+      get "/orders/:id", to: "orders#show", as: :order_by_reference
 
       # Payments
       scope :payments do
@@ -47,7 +43,7 @@ Rails.application.routes.draw do
     end
 
     # Orders
-    resources :orders, only: [:index, :show] do
+    resources :orders, only: %i[index show] do
       member do
         patch :update_status
         post  :cancel

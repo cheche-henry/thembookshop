@@ -5,6 +5,7 @@
 #   - Set MPESA_ENV=production in your .env
 #   - Replace sandbox credentials with live ones from developer.safaricom.co.ke
 #   - Whitelist your callback URL in the Daraja portal
+#   - Set MPESA_CALLBACK_TOKEN so callback requests can be authenticated
 # ============================================================
 
 require "faraday"
@@ -14,6 +15,8 @@ require "base64"
 class MpesaService
   SANDBOX_URL    = "https://sandbox.safaricom.co.ke".freeze
   PRODUCTION_URL = "https://api.safaricom.co.ke".freeze
+  OPEN_TIMEOUT   = 5
+  READ_TIMEOUT   = 20
 
   def initialize
     @consumer_key    = ENV.fetch("MPESA_CONSUMER_KEY")
@@ -30,27 +33,30 @@ class MpesaService
   # Initiates an STK Push (Lipa Na M-Pesa prompt on the customer's phone)
   # Returns the raw Daraja response hash, or raises MpesaError
   def initiate_stk_push(phone:, amount:, order_reference:, description: nil)
+    phone = PhoneNumber.normalize(phone)
+    raise MpesaError, "Invalid Kenyan phone number for M-Pesa" unless PhoneNumber.valid?(phone)
+
     token      = fetch_access_token
     timestamp  = Time.current.strftime("%Y%m%d%H%M%S")
     password   = generate_password(timestamp)
-    amount_int = amount.ceil.to_i  # M-Pesa only accepts whole KES
+    amount_int = amount.ceil.to_i # M-Pesa only accepts whole KES
 
     body = {
       BusinessShortCode: @shortcode,
-      Password:          password,
-      Timestamp:         timestamp,
-      TransactionType:   "CustomerPayBillOnline",
-      Amount:            amount_int,
-      PartyA:            phone,
-      PartyB:            @shortcode,
-      PhoneNumber:       phone,
-      CallBackURL:       @callback_url,
-      AccountReference:  order_reference,
-      TransactionDesc:   description || "Them Bookshop order #{order_reference}",
+      Password: password,
+      Timestamp: timestamp,
+      TransactionType: "CustomerPayBillOnline",
+      Amount: amount_int,
+      PartyA: phone,
+      PartyB: @shortcode,
+      PhoneNumber: phone,
+      CallBackURL: @callback_url,
+      AccountReference: order_reference,
+      TransactionDesc: description || "Them Bookshop order #{order_reference}"
     }
 
     response = connection(token).post("/mpesa/stkpush/v1/processrequest", body.to_json)
-    parsed   = JSON.parse(response.body)
+    parsed   = parse_response(response)
 
     raise MpesaError, parsed["errorMessage"] || "STK Push failed" if response.status != 200
     raise MpesaError, parsed["ResponseDescription"] if parsed["ResponseCode"] != "0"
@@ -67,13 +73,13 @@ class MpesaService
 
     body = {
       BusinessShortCode: @shortcode,
-      Password:          generate_password(timestamp),
-      Timestamp:         timestamp,
-      CheckoutRequestID: checkout_request_id,
+      Password: generate_password(timestamp),
+      Timestamp: timestamp,
+      CheckoutRequestID: checkout_request_id
     }
 
     response = connection(token).post("/mpesa/stkpushquery/v1/query", body.to_json)
-    JSON.parse(response.body)
+    parse_response(response)
   rescue Faraday::Error => e
     raise MpesaError, "Network error: #{e.message}"
   end
@@ -81,9 +87,15 @@ class MpesaService
   # ── Private helpers ───────────────────────────────────────────────────────
   private
 
+  def parse_response(response)
+    JSON.parse(response.body)
+  rescue JSON::ParserError
+    raise MpesaError, "Unexpected response from M-Pesa"
+  end
+
   def fetch_access_token
     credentials = Base64.strict_encode64("#{@consumer_key}:#{@consumer_secret}")
-    conn = Faraday.new(url: @base_url) do |f|
+    conn = Faraday.new(url: @base_url, request: { timeout: READ_TIMEOUT, open_timeout: OPEN_TIMEOUT }) do |f|
       f.request  :retry, max: 2
       f.response :raise_error
     end
@@ -98,6 +110,8 @@ class MpesaService
     parsed["access_token"]
   rescue Faraday::Error => e
     raise MpesaError, "Auth network error: #{e.message}"
+  rescue JSON::ParserError
+    raise MpesaError, "Unexpected auth response from M-Pesa"
   end
 
   def generate_password(timestamp)
@@ -106,8 +120,8 @@ class MpesaService
   end
 
   def connection(access_token)
-    Faraday.new(url: @base_url) do |f|
-      f.request  :retry, max: 2
+    Faraday.new(url: @base_url, request: { timeout: READ_TIMEOUT, open_timeout: OPEN_TIMEOUT }) do |f|
+      f.request :retry, max: 2
       f.headers["Content-Type"]  = "application/json"
       f.headers["Authorization"] = "Bearer #{access_token}"
       f.response :raise_error

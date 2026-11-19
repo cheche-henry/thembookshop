@@ -161,7 +161,7 @@ export default function DashboardPage() {
                   <Link key={p.id} to={`/admin/products/${p.id}/edit`} className="flex items-center justify-between px-4 py-3 hover:bg-white/5 transition-colors group">
                     <div className="min-w-0 flex-1 pr-3">
                       <p className="text-white text-sm font-medium truncate group-hover:text-green-400 transition-colors">{p.name}</p>
-                      <p className="text-gray-600 text-xs">{p.category}</p>
+                      <p className="text-gray-600 text-xs">{p.subcategory || p.category}</p>
                     </div>
                     <span className={`text-xs font-bold px-2 py-0.5 rounded-full flex-shrink-0 ${
                       p.stock_quantity === 0 ? 'bg-red-500/20 text-red-400' : 'bg-amber-500/20 text-amber-400'

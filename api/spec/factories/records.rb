@@ -3,8 +3,10 @@ FactoryBot.define do
     sequence(:name) { |n| "Textbook #{n}" }
     description { "A school textbook" }
     price { 350 }
-    category { "Textbooks" }
+    category { "Books" }
+    subcategory { "Textbooks" }
     class_level { "Grade 4" }
+    class_levels { ["Grade 4"] }
     subject { "Mathematics" }
     stock_quantity { 10 }
     active { true }

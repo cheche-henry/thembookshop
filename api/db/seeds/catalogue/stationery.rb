@@ -1,0 +1,268 @@
+# Stationery rows from THEM_FEB_2026.xls.
+THEM_BOOKSHOP_STATIONERY = [
+  {
+    title: "EXERCISE BOOKS & NOTEBOOKS",
+    category: "Stationery",
+    subcategory: "Exercise Books & Notebooks",
+    rows: [
+      ["48PGS SUPERIOR",                  25,  150, nil],
+      ["64 SUPERIOR",                     30,  150, nil],
+      ["80PGS SUPERIOR",                  35,  200, "Best Seller"],
+      ["120PGS SUPERIOR",                 50,  120, nil],
+      ["200 SUPERIOR",                    70,  100, nil],
+      ["64 PGS KASUKU",                   30,  100, nil],
+      ["200PGS KASUKU",                   75,  80,  nil],
+      ["48 PGS 1/2 INCH",                 30,  100, nil],
+      ["96 PGS 1/2 INCH",                 45,  80,  nil],
+      ["48PGS MUSIC",                     35,  60,  nil],
+      ["A5 48PGS HAND WRITTING",          30,  80,  nil],
+      ["HAND WRITING 48PGS",              30,  80,  nil],
+      ["80PGS A4",                        50,  100, nil],
+      ["120PGS A4",                       55,  80,  nil],
+      ["200A4 PGS",                       80,  60,  nil],
+      ["64PGS A4",                        45,  100, nil],
+      ["A4 96 PGS GRAPH BOOKS",           50,  70,  nil],
+      ["GRAPH BOOKS 48PGS",               35,  80,  nil],
+      ["PLAIN EX A5 48PGS",               25,  80,  nil],
+      ["A4 PLAIN BOOK",                   45,  60,  nil],
+      ["SHORTHAND NOTE BOOK A5",          80,  25,  nil],
+      ["A6 SPIRAL NBOOK",                 80,  30,  nil],
+      ["A6 EXECUTIVE NOTE BOOK",          120, 20,  nil],
+      ["A5 HCOVER",                       80,  30,  nil],
+      ["A6 HCOVER",                       70,  30,  nil],
+      ["A7 HCOVER",                       60,  30,  nil]
+    ]
+  },
+  {
+    title: "DIARIES & PLANNERS",
+    category: "Stationery",
+    subcategory: "Diaries & Planners",
+    rows: [
+      ["A6 EXECUTIVE DIARY",              150, 20,  nil],
+      ["A5 DIARY",                        120, 25,  nil],
+      ["SCHOOL DIARIES",                  150, 30,  nil]
+    ]
+  },
+  {
+    title: "PAPER, ENVELOPES & BOOK COVERS",
+    category: "Stationery",
+    subcategory: "Paper, Envelopes & Book Covers",
+    rows: [
+      ["FULLSCAPS",                       60,  40,  nil],
+      ["LOOSE LEAF",                      50,  50,  nil],
+      ["A4 ENVELOP",                      5,   300, nil],
+      ["A5 ENVELOP",                      4,   300, nil],
+      ["A6ENVELOP",                       3,   200, nil],
+      ["A7ENVELOP",                       3,   200, nil],
+      ["DL WHITE",                        3,   200, nil],
+      ["MEDICAL ENVELOP",                 5,   100, nil],
+      ["PHOTOCOPY PAPERS",                550, 30,  nil],
+      ["TRANSPARENCY PAPERS",             30,  30,  nil],
+      ["AFRILABELS",                      20,  100, nil],
+      ["TEEPEE",                          60,  100, "Popular"],
+      ["A4 TEEPEE COVERS",                70,  80,  nil],
+      ["A5 TEEPEE READY CLEAR COVER",     60,  80,  nil],
+      ["TEEPEE LAMINATED COVERS",         80,  60,  nil],
+      ["A4 READY COVERS BROWN",           40,  100, nil],
+      ["A5 READY COVER BROWN",            30,  100, nil],
+      ["BROWN COVERS",                    35,  100, nil],
+      ["A4 ADHESIVE COVERS",              80,  80,  nil],
+      ["A5 ADHESIVE COVERS",              60,  80,  nil]
+    ]
+  },
+  {
+    title: "ACCOUNTING & CASH BOOKS",
+    category: "Stationery",
+    subcategory: "Accounting & Cash Books",
+    rows: [
+      ["2QUIRE",                          175, 30,  nil],
+      ["3QUIRE",                          175, 25,  nil],
+      ["4QUIRE",                          205, 20,  nil],
+      ["CASH BOOK 1QUIRE",                120, 30,  nil],
+      ["CASH BOOK 2QUIRE",                175, 25,  nil],
+      ["LEDGER 1 QUIRE",                  150, 25,  nil],
+      ["LEDGER 2 QUIRE",                  220, 20,  nil],
+      ["NUMBERED RECEIPTS",               45,  50,  nil],
+      ["INVOICE A5",                      60,  30,  nil]
+    ]
+  },
+  {
+    title: "REGISTERS & ADMIN BOOKS",
+    category: "Stationery",
+    subcategory: "Registers & Admin Books",
+    rows: [
+      ["ADMISSION REGISTER",              350, 15,  nil],
+      ["STAFF REGISTER",                  280, 15,  nil],
+      ["VISITORS BOOK",                   180, 15,  nil],
+      ["LESSON PLAN CBC",                 150, 20,  nil],
+      ["SCHEME OF WORK",                  120, 20,  nil],
+      ["SCHEME OF WORK CBC",              120, 20,  nil],
+      ["CONSUMABLE STORE LEDGER",         250, 10,  nil],
+      ["DELIVER BOOK",                    120, 15,  nil],
+      ["ORDER BOOK",                      100, 20,  nil],
+      ["REGISTERS",                       200, 15,  nil]
+    ]
+  },
+  {
+    title: "PENS, PENCILS, ERASERS & SHARPENERS",
+    category: "Stationery",
+    subcategory: "Writing & Correction",
+    rows: [
+      ["BIC",                             15,  500, "Best Seller"],
+      ["FINE BIC",                        20,  300, nil],
+      ["OBAMA",                           5,   500, nil],
+      ["0BAMA",                           5,   300, nil],
+      ["CHAMPION PEN",                    10,  400, nil],
+      ["YOUTH PEN",                       10,  400, nil],
+      ["PENTONIC BALLPEN",                12,  300, nil],
+      ["3 IN 1 PEN",                      20,  200, nil],
+      ["ROLLER PEN",                      30,  150, nil],
+      ["GELX PEN",                        25,  200, nil],
+      ["EXECUTIVE PEN",                   50,  80,  nil],
+      ["DOLLAR PEN",                      80,  50,  nil],
+      ["DOLLAR FOUTAIN PEN INK",          30,  40,  nil],
+      ["MARKER PEN PERMANENT",            50,  100, nil],
+      ["MARKER PEN HAIJAR",               45,  80,  nil],
+      ["MARKER PEN INK",                  30,  60,  nil],
+      ["WHITE BOARD MARKER",              60,  80,  nil],
+      ["HIGHLIGHTER",                     40,  100, nil],
+      ["CORRECTION FLUID",                45,  80,  nil],
+      ["CORRECTION PEN",                  50,  80,  nil],
+      ["CARBON",                          30,  40,  nil],
+      ["NATARAJ PENCIL",                  10,  400, "Best Seller"],
+      ["PLATINUM PENCILS",                5,   400, nil],
+      ["PELICAN PENCILS",                 10,  300, nil],
+      ["STAEDLER HB PENCIL",              15,  200, nil],
+      ["HJ PENCILS",                      10,  300, nil],
+      ["GYLENE 3B",                       10,  200, nil],
+      ["GYLENE HB",                       10,  200, nil],
+      ["DAMBASA PENCIL",                  8,   300, nil],
+      ["OFFICE PENCILS",                  10,  200, nil],
+      ["OFFICE POINT PENCIL",             10,  200, nil],
+      ["HB 4,3,2,5BS",                    15,  150, nil],
+      ["CLUTCH NON SHARPEN PENCIL",       80,  50,  nil],
+      ["ERASER NEO LINE",                 5,   500, nil],
+      ["BR 80",                           15,  200, nil],
+      ["BR 80 BLACK EXAM ERASER",         20,  200, nil],
+      ["SHARPENER CHEAP",                 10,  200, nil],
+      ["SHARPENER NATARAJ",               15,  200, nil],
+      ["SHARPENING FILE",                 30,  50,  nil],
+      ["QUILL",                           80,  15,  nil]
+    ]
+  },
+  {
+    title: "FILES & FILING",
+    category: "Stationery",
+    subcategory: "Files & Filing",
+    rows: [
+      ["BOX FILE",                        200, 30,  nil],
+      ["SPRING FILE",                     60,  50,  nil],
+      ["DOCUMENT WALLETS MANILA",         30,  80,  nil],
+      ["PORTIFOLIO",                      150, 20,  nil]
+    ]
+  },
+  {
+    title: "OFFICE ESSENTIALS",
+    category: "Stationery",
+    subcategory: "Office Essentials",
+    rows: [
+      ["STAMP PAD",                       80,  20,  nil],
+      ["STAMP PAD INK",                   50,  30,  nil],
+      ["STAPLER M & G",                   250, 25,  nil],
+      ["STAPLER MG",                      250, 25,  nil],
+      ["STAPLER NO 10",                   150, 30,  nil],
+      ["STAPLER NO 207",                  250, 25,  nil],
+      ["STAPLER NO 2819",                 280, 20,  nil],
+      ["STAPLES",                         30,  100, nil],
+      ["STAPLES MG",                      35,  80,  nil],
+      ["NO 10 STAPLES",                   30,  100, nil],
+      ["STAPLES 23/24",                   50,  80,  nil],
+      ["STAPLES BIG PACKET",              80,  50,  nil],
+      ["STAPLE REMOVER",                  40,  60,  nil],
+      ["PUNCH",                           250, 25,  nil],
+      ["PUNCH SMALL",                     80,  40,  nil],
+      ["SMALL PUNCH",                     80,  40,  nil],
+      ["PAPER CLIPS",                     30,  100, nil],
+      ["RUBBER BANDS",                    20,  100, nil],
+      ["OFFICE PIN",                      20,  100, nil],
+      ["MAP PINS",                        30,  80,  nil],
+      ["THUMB TAC",                       25,  100, nil],
+      ["STICKY NOTES",                    80,  80,  nil],
+      ["COLOR STICKY NOTES",              100, 60,  nil],
+      ["ID SEALING",                      30,  50,  nil],
+      ["CASHSALE",                        50,  30,  nil]
+    ]
+  },
+  {
+    title: "ADHESIVES & TAPES",
+    category: "Stationery",
+    subcategory: "Adhesives & Tapes",
+    rows: [
+      ["GLUE",                            25,  150, nil],
+      ["1 KG GLUE",                       200, 20,  nil],
+      ["GLUE STICK",                      40,  120, nil],
+      ["GLUE STICK PELICAN",              45,  100, nil],
+      ["SUPER GLUE",                      50,  80,  nil],
+      ["CELLOTAPE",                       40,  150, nil],
+      ["2 CELLOTAPE",                     70,  80,  nil],
+      ["MASKING TAPE",                    60,  60,  nil],
+      ["BLACK TAPE",                      80,  50,  nil],
+      ["BIDDING TAPE",                    60,  50,  nil],
+      ["PVC TWINE",                       40,  60,  nil]
+    ]
+  },
+  {
+    title: "CALCULATORS",
+    category: "Stationery",
+    subcategory: "Calculators",
+    rows: [
+      ["CASIO SCIENTIFIC CALCULATOR",     1200, 30, "Best Seller"],
+      ["GAVOO SCIENTIFIC",                800, 40,  nil],
+      ["SCIENT CALCULATOR",               900, 30,  nil],
+      ["KKY CALCULATOR",                  350, 40,  nil],
+      ["KADIO ORDINARY CALCULATOR",       300, 40,  nil],
+      ["CALCULATOR BATTERIES",            50,  80,  nil],
+      ["CALCULATOR BATTERIES 2032/2035",  80,  50,  nil],
+      ["ORDINARY CALCULATOR BATTERY",     40,  80,  nil]
+    ]
+  },
+  {
+    title: "MATH SETS, RULERS & TECHNICAL DRAWING",
+    category: "Stationery",
+    subcategory: "Math Sets & Technical Drawing",
+    rows: [
+      ["NATARAJ MATH SETS",               250, 100, "Best Seller"],
+      ["K-MAY MATH SETS",                 220, 80,  nil],
+      ["CLASSMATES SETS",                 200, 100, "Popular"],
+      ["OXFORD MATH SETS",                320, 60,  nil],
+      ["KOFA",                            200, 60,  nil],
+      ["BB COMPASS",                      80,  60,  nil],
+      ["BB DIVIDER",                      60,  50,  nil],
+      ["SET SQUARE",                      40,  80,  nil],
+      ["STENCIL LETTERING",               80,  40,  nil],
+      ["TRICIRCLE 102",                   180, 40,  nil],
+      ["TRI CIRCLE 103",                  180, 40,  nil],
+      ["TRI CIRCLE 265",                  200, 35,  nil],
+      ["TRICYCLE B",                      180, 35,  nil],
+      ["GELX RULERS",                     10,  200, nil],
+      ["BB RULERS",                       40,  150, nil],
+      ["BB RULERS PLASTIC",               35,  150, nil],
+      ["STEEL RULER",                     80,  80,  nil],
+      ["FLEX RULERS",                     30,  100, nil],
+      ["HACO RULER",                      45,  150, nil],
+      ["ALPHABET RULER",                  30,  80,  nil]
+    ]
+  },
+  {
+    title: "CHALK & WHITEBOARD SUPPLIES",
+    category: "Stationery",
+    subcategory: "Chalk & Whiteboard",
+    rows: [
+      ["DUSTLESS CHALK",                  50,  80,  nil],
+      ["DUSTLESS CHALK COLOURED",         70,  60,  nil],
+      ["DUSTLESS CHAK COLOURED",          70,  50,  nil],
+      ["WOODEN DUSTERS",                  80,  25,  nil],
+      ["PLASTIC DUSTERS",                 60,  30,  nil]
+    ]
+  }
+].freeze

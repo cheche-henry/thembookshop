@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2026_11_16_120000) do
+ActiveRecord::Schema[7.1].define(version: 2026_11_19_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
@@ -81,17 +81,17 @@ ActiveRecord::Schema[7.1].define(version: 2026_11_16_120000) do
     t.decimal "delivery_fee", precision: 10, scale: 2, default: "0.0", null: false
     t.decimal "total_amount", precision: 10, scale: 2, null: false
     t.string "status", default: "pending", null: false
-    t.boolean "stock_restored", default: false, null: false
-    t.string "idempotency_key"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.check_constraint "total_amount > 0::numeric", name: "orders_total_amount_positive"
+    t.boolean "stock_restored", default: false, null: false
+    t.string "idempotency_key"
     t.index ["created_at"], name: "index_orders_on_created_at"
     t.index ["customer_email"], name: "index_orders_on_customer_email"
     t.index ["customer_phone"], name: "index_orders_on_customer_phone"
     t.index ["idempotency_key"], name: "index_orders_on_idempotency_key", unique: true
     t.index ["reference"], name: "index_orders_on_reference", unique: true
     t.index ["status"], name: "index_orders_on_status"
+    t.check_constraint "total_amount > 0::numeric", name: "orders_total_amount_positive"
   end
 
   create_table "payments", force: :cascade do |t|
@@ -129,12 +129,24 @@ ActiveRecord::Schema[7.1].define(version: 2026_11_16_120000) do
     t.integer "sort_order", default: 0
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.check_constraint "stock_quantity >= 0", name: "products_stock_quantity_non_negative"
+    t.string "subcategory"
+    t.string "subsubject"
+    t.string "stage"
+    t.string "class_levels", default: [], null: false, array: true
+    t.string "raw_name"
+    t.string "source_key"
     t.index ["active"], name: "index_products_on_active"
     t.index ["category", "active"], name: "index_products_on_category_and_active"
+    t.index ["category", "subcategory"], name: "index_products_on_category_and_subcategory"
     t.index ["category"], name: "index_products_on_category"
     t.index ["class_level"], name: "index_products_on_class_level"
+    t.index ["class_levels"], name: "index_products_on_class_levels", using: :gin
+    t.index ["source_key"], name: "index_products_on_source_key", unique: true
+    t.index ["stage"], name: "index_products_on_stage"
+    t.index ["subcategory"], name: "index_products_on_subcategory"
     t.index ["subject"], name: "index_products_on_subject"
+    t.index ["subsubject"], name: "index_products_on_subsubject"
+    t.check_constraint "stock_quantity >= 0", name: "products_stock_quantity_non_negative"
   end
 
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"

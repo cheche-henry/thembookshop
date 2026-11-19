@@ -6,7 +6,12 @@ Rails.application.routes.draw do
   namespace :api do
     namespace :v1 do
       # Products (read-only)
-      resources :products, only: %i[index show]
+      resources :products, only: %i[index show] do
+        collection do
+          get :facets
+          get :meta
+        end
+      end
 
       # Guest orders
       resources :orders, only: [:create]

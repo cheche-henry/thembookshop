@@ -1,15 +1,28 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useParams, Link } from 'react-router-dom'
-import { ArrowLeft, Upload, X, Plus, Minus, Package } from 'lucide-react'
+import { ArrowLeft, Upload, X, Plus, Minus } from 'lucide-react'
 import { api } from '../utils/api'
 import { Input, Select, Textarea, Btn } from '../components/AdminInput'
+import {
+  TAXONOMY, DEPARTMENTS, SUBJECTS, SUBJECT_COMPONENTS, STAGES, CLASS_LEVELS, BADGES,
+} from '../../utils/catalogue'
 
-const CATEGORIES  = ['Textbooks','Revision Books','Storybooks','Exercise Books','Pens & Pencils','Geometry Sets','Rulers','School Bags','Stationery']
-const CLASS_LEVELS = ['','PP1','PP2','Grade 1','Grade 2','Grade 3','Grade 4','Grade 5','Grade 6','Grade 7','Grade 8','Grade 9','Grade 10','Form 1','Form 2','Form 3','Form 4']
-const SUBJECTS    = ['','Mathematics','English','Kiswahili','Science','Biology','Chemistry','Physics','Geography','History','Social Studies','Creative Arts','CRE','Agriculture','Pre-Technical','Business']
-const BADGES      = ['','Best Seller','New','New Edition','Popular','Exam Prep','Bundle Deal','Value Pack','Kids Favorite','Set Book']
+// Used until /api/v1/products/meta resolves, and if the request fails.
+const FALLBACK_META = {
+  categories:  DEPARTMENTS.map((name) => ({ name, subcategories: TAXONOMY[name] })),
+  subjects:    SUBJECTS.map((name) => ({ name, components: SUBJECT_COMPONENTS[name] || [] })),
+  stages:      Object.entries(STAGES).map(([name, levels]) => ({ name, levels })),
+  class_levels: CLASS_LEVELS,
+  badges:      BADGES,
+}
 
-const EMPTY = { name:'', description:'', price:'', category:'', class_level:'', subject:'', stock_quantity:'0', active: true, badge:'', sort_order:'0' }
+const EMPTY = {
+  name: '', description: '', price: '',
+  category: '', subcategory: '',
+  stage: '', class_levels: [],
+  subject: '', subsubject: '',
+  stock_quantity: '0', active: true, badge: '', sort_order: '0',
+}
 
 export default function ProductFormPage() {
   const { id }              = useParams()
@@ -18,6 +31,8 @@ export default function ProductFormPage() {
   const fileRef             = useRef()
 
   const [form, setForm]           = useState(EMPTY)
+  const [meta, setMeta]           = useState(FALLBACK_META)
+  const [rawName, setRawName]     = useState('')
   const [imageFile, setImageFile] = useState(null)
   const [imagePreview, setImgPrev] = useState(null)
   const [existingImage, setExisting] = useState(null)
@@ -28,30 +43,72 @@ export default function ProductFormPage() {
   const [restocking, setRestocking] = useState(false)
   const stockFocused = useRef(false)
 
+  // Taxonomy comes from the API so the form and storefront cannot drift apart.
+  useEffect(() => {
+    api.products.catalogueMeta()
+      .then((res) => { if (res?.data) setMeta(res.data) })
+      .catch(() => { /* keep the bundled fallback */ })
+  }, [])
+
   useEffect(() => {
     if (!isEdit) return
     api.products.get(id).then(res => {
       const p = res.data
+      const levels = Array.isArray(p.class_levels) && p.class_levels.length
+        ? p.class_levels
+        : (p.class_level ? [p.class_level] : [])
+
       setForm({
         name:           p.name || '',
         description:    p.description || '',
         price:          p.price || '',
         category:       p.category || '',
-        class_level:    p.class_level || '',
+        subcategory:    p.subcategory || '',
+        stage:          p.stage || '',
+        class_levels:   levels,
         subject:        p.subject || '',
+        subsubject:     p.subsubject || '',
         stock_quantity: String(p.stock_quantity ?? '0'),
         active:         p.active ?? true,
         badge:          p.badge || '',
         sort_order:     p.sort_order ?? '0',
       })
+      setRawName(p.raw_name || '')
       setExisting(p.image_url)
       setLoading(false)
     }).catch(e => { alert(e.message); navigate('/admin/products') })
   }, [id])
 
+  const subcategories = meta.categories.find(c => c.name === form.category)?.subcategories || []
+  const components    = meta.subjects.find(s => s.name === form.subject)?.components || []
+  const levelOrder    = meta.class_levels || CLASS_LEVELS
+
   const set = (key, val) => {
     setForm(f => ({ ...f, [key]: val }))
     setErrors(e => ({ ...e, [key]: null }))
+  }
+
+  const setCategory = (value) => {
+    // A subcategory only exists inside its department.
+    setForm(f => ({ ...f, category: value, subcategory: '' }))
+    setErrors(e => ({ ...e, category: null, subcategory: null }))
+  }
+
+  const setSubject = (value) => {
+    // Fasihi is a component of Kiswahili, not a peer subject.
+    setForm(f => ({ ...f, subject: value, subsubject: '' }))
+    setErrors(e => ({ ...e, subject: null, subsubject: null }))
+  }
+
+  const toggleLevel = (level) => {
+    setForm(f => {
+      const next = f.class_levels.includes(level)
+        ? f.class_levels.filter(l => l !== level)
+        : [...f.class_levels, level]
+      next.sort((a, b) => levelOrder.indexOf(a) - levelOrder.indexOf(b))
+      return { ...f, class_levels: next }
+    })
+    setErrors(e => ({ ...e, class_levels: null }))
   }
 
   const handleImage = (e) => {
@@ -76,10 +133,11 @@ export default function ProductFormPage() {
 
   const validate = () => {
     const e = {}
-    if (!form.name.trim())    e.name     = 'Name is required'
-    if (!form.price)          e.price    = 'Price is required'
-    if (isNaN(form.price) || Number(form.price) <= 0) e.price = 'Price must be a positive number'
-    if (!form.category)       e.category = 'Category is required'
+    if (!form.name.trim()) e.name = 'Name is required'
+    if (!form.price || Number(form.price) <= 0) e.price = 'Price must be a positive number'
+    if (!form.category)    e.category = 'Department is required'
+    if (!form.subcategory) e.subcategory = 'Subcategory is required'
+    if (form.subsubject && !form.subject) e.subject = 'Choose a subject before its component'
     setErrors(e)
     return Object.keys(e).length === 0
   }
@@ -88,9 +146,27 @@ export default function ProductFormPage() {
     e.preventDefault()
     if (!validate()) return
     setSaving(true)
+
     try {
       const fd = new FormData()
-      Object.entries(form).forEach(([k, v]) => fd.append(`product[${k}]`, v))
+
+      Object.entries(form).forEach(([key, value]) => {
+        if (key === 'class_levels') return
+
+        if (typeof value === 'boolean') {
+          fd.append(`product[${key}]`, value ? 'true' : 'false')
+        } else {
+          fd.append(`product[${key}]`, value ?? '')
+        }
+      })
+
+      if (form.class_levels.length) {
+        form.class_levels.forEach(level => fd.append('product[class_levels][]', level))
+      } else {
+        // Sends an empty array so clearing every level is possible on update.
+        fd.append('product[class_levels][]', '')
+      }
+
       if (imageFile) fd.append('product[image]', imageFile)
 
       if (isEdit) {
@@ -151,7 +227,14 @@ export default function ProductFormPage() {
         <span className="text-gray-300">{isEdit ? 'Edit Product' : 'New Product'}</span>
       </div>
 
-      <h1 className="text-white font-bold text-2xl">{isEdit ? 'Edit Product' : 'Add New Product'}</h1>
+      <div>
+        <h1 className="text-white font-bold text-2xl">{isEdit ? 'Edit Product' : 'Add New Product'}</h1>
+        {isEdit && rawName && (
+          <p className="text-xs text-gray-500 mt-1">
+            Excel row: <span className="text-gray-400 font-mono">{rawName}</span>
+          </p>
+        )}
+      </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
         <div className="bg-gray-900 border border-white/10 rounded-2xl p-6 space-y-5">
@@ -197,36 +280,123 @@ export default function ProductFormPage() {
               onBlur={() => { stockFocused.current = false }}
             />
           </div>
+        </div>
+
+        {/* Catalogue taxonomy */}
+        <div className="bg-gray-900 border border-white/10 rounded-2xl p-6 space-y-5">
+          <h2 className="text-white font-semibold text-sm uppercase tracking-wider text-gray-400">Catalogue</h2>
 
           <div className="grid grid-cols-2 gap-4">
             <Select
-              label="Category"
+              label="Department"
               value={form.category}
-              onChange={e => set('category', e.target.value)}
+              onChange={e => setCategory(e.target.value)}
               error={errors.category}
             >
-              <option value="">Select category</option>
-              {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+              <option value="">Select department</option>
+              {meta.categories.map(c => <option key={c.name} value={c.name}>{c.name}</option>)}
+            </Select>
+            <Select
+              label="Subcategory"
+              value={form.subcategory}
+              onChange={e => set('subcategory', e.target.value)}
+              error={errors.subcategory}
+              disabled={!form.category}
+            >
+              <option value="">{form.category ? 'Select subcategory' : 'Choose a department first'}</option>
+              {subcategories.map(sub => <option key={sub} value={sub}>{sub}</option>)}
+            </Select>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <Select
+              label="Subject (optional)"
+              value={form.subject}
+              onChange={e => setSubject(e.target.value)}
+              error={errors.subject}
+            >
+              <option value="">— Not subject-specific —</option>
+              {meta.subjects.map(s => <option key={s.name} value={s.name}>{s.name}</option>)}
+            </Select>
+            <Select
+              label="Subject component (optional)"
+              value={form.subsubject}
+              onChange={e => set('subsubject', e.target.value)}
+              disabled={!components.length}
+            >
+              <option value="">{components.length ? '— None —' : 'No components'}</option>
+              {components.map(comp => <option key={comp} value={comp}>{comp}</option>)}
+            </Select>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <Select
+              label="Stage-wide level (optional)"
+              value={form.stage}
+              onChange={e => set('stage', e.target.value)}
+            >
+              <option value="">— Not stage-wide —</option>
+              {meta.stages.map(stage => (
+                <option key={stage.name} value={stage.name}>{stage.name}</option>
+              ))}
             </Select>
             <Select
               label="Badge (optional)"
               value={form.badge}
               onChange={e => set('badge', e.target.value)}
             >
-              {BADGES.map(b => <option key={b} value={b}>{b || '— None —'}</option>)}
+              <option value="">— None —</option>
+              {meta.badges.map(b => <option key={b} value={b}>{b}</option>)}
             </Select>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <Select label="Class Level" value={form.class_level} onChange={e => set('class_level', e.target.value)}>
-              {CLASS_LEVELS.map(l => <option key={l} value={l}>{l || '— Not applicable —'}</option>)}
-            </Select>
-            <Select label="Subject" value={form.subject} onChange={e => set('subject', e.target.value)}>
-              {SUBJECTS.map(s => <option key={s} value={s}>{s || '— Not applicable —'}</option>)}
-            </Select>
+          {/* Multi-level picker: Form 3 & 4 books select both. */}
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <label className="text-sm font-semibold text-gray-300">Class levels</label>
+              {form.class_levels.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => set('class_levels', [])}
+                  className="text-xs text-gray-500 hover:text-red-400"
+                >
+                  Clear levels
+                </button>
+              )}
+            </div>
+            <p className="text-xs text-gray-500 mb-3">
+              Select every level this product serves. Stage-wide references such as atlases should use the stage field above instead.
+            </p>
+
+            <div className="space-y-3">
+              {meta.stages.map((stage) => (
+                <div key={stage.name}>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1">{stage.name}</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {stage.levels.map((level) => {
+                      const selected = form.class_levels.includes(level)
+                      return (
+                        <button
+                          key={level}
+                          type="button"
+                          onClick={() => toggleLevel(level)}
+                          className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors ${
+                            selected
+                              ? 'bg-green-600 text-white'
+                              : 'bg-gray-800 text-gray-400 hover:bg-gray-700 hover:text-gray-200'
+                          }`}
+                        >
+                          {level}
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-4">
             <label className="flex items-center gap-3 cursor-pointer">
               <div className="relative">
                 <input type="checkbox" checked={form.active} onChange={e => set('active', e.target.checked)} className="sr-only" />
@@ -235,6 +405,16 @@ export default function ProductFormPage() {
               </div>
               <span className="text-sm text-gray-300">Active (visible in store)</span>
             </label>
+
+            <div className="ml-auto w-32">
+              <Input
+                label="Sort order"
+                type="text"
+                inputMode="numeric"
+                value={form.sort_order}
+                onChange={e => { const v = e.target.value; if (v === '' || /^-?\d+$/.test(v)) set('sort_order', v) }}
+              />
+            </div>
           </div>
         </div>
 

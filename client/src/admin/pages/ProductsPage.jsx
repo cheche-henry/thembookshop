@@ -5,6 +5,7 @@ import { api } from '../utils/api'
 import { Table, Th, Td, Tr } from '../components/AdminTable'
 import Pagination from '../components/Pagination'
 import { Btn } from '../components/AdminInput'
+import { DEPARTMENTS, SUBJECTS, TAXONOMY } from '../../utils/catalogue'
 
 const fmt = (n) => `KES ${Number(n || 0).toLocaleString('en-KE')}`
 
@@ -13,12 +14,16 @@ export default function ProductsPage() {
   const [meta, setMeta]         = useState(null)
   const [loading, setLoading]   = useState(true)
   const [deleting, setDeleting] = useState(null)
-  const [params, setParams]     = useState({ page: 1, per_page: 25, q: '', category: '' })
+  const [params, setParams]     = useState({
+    page: 1, per_page: 25, q: '', category: '', subcategory: '', subject: '',
+  })
   const navigate                = useNavigate()
   const loadIdRef               = useRef(0)
   const paramsRef               = useRef(params)
 
   paramsRef.current = params
+
+  const subcategoryOptions = params.category ? (TAXONOMY[params.category] || []) : []
 
   const load = async (p) => {
     const id = ++loadIdRef.current
@@ -83,12 +88,39 @@ export default function ProductsPage() {
         <div className="relative">
           <select
             value={params.category}
-            onChange={e => update({ category: e.target.value })}
+            onChange={e => update({ category: e.target.value, subcategory: '' })}
             className="bg-gray-900 border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none focus:ring-2 focus:ring-green-500/50 appearance-none pr-9"
           >
-            <option value="">All Categories</option>
-            {['Textbooks','Revision Books','Storybooks','Exercise Books','Pens & Pencils','Geometry Sets','Rulers','School Bags'].map(c => (
+            <option value="">All Departments</option>
+            {DEPARTMENTS.map(c => (
               <option key={c} value={c}>{c}</option>
+            ))}
+          </select>
+          <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none" />
+        </div>
+        <div className="relative">
+          <select
+            value={params.subcategory}
+            onChange={e => update({ subcategory: e.target.value })}
+            disabled={!params.category}
+            className="bg-gray-900 border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none focus:ring-2 focus:ring-green-500/50 appearance-none pr-9 disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            <option value="">All Subcategories</option>
+            {subcategoryOptions.map(sub => (
+              <option key={sub} value={sub}>{sub}</option>
+            ))}
+          </select>
+          <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none" />
+        </div>
+        <div className="relative">
+          <select
+            value={params.subject}
+            onChange={e => update({ subject: e.target.value })}
+            className="bg-gray-900 border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none focus:ring-2 focus:ring-green-500/50 appearance-none pr-9"
+          >
+            <option value="">All Subjects</option>
+            {SUBJECTS.map(subject => (
+              <option key={subject} value={subject}>{subject}</option>
             ))}
           </select>
           <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none" />
@@ -102,7 +134,7 @@ export default function ProductsPage() {
         <thead>
           <tr>
             <Th>Product</Th>
-            <Th>Category</Th>
+            <Th>Catalogue</Th>
             <Th>Price</Th>
             <Th>Stock</Th>
             <Th>Status</Th>
@@ -136,13 +168,20 @@ export default function ProductsPage() {
                   <div className="min-w-0">
                     <p className="text-white font-medium text-sm truncate max-w-48">{p.name}</p>
                     <div className="flex gap-1 mt-0.5">
-                      {p.class_level && <span className="text-xs text-gray-600">{p.class_level}</span>}
-                      {p.subject && <span className="text-xs text-gray-600">· {p.subject}</span>}
+                      {(p.level_label || p.class_level) && <span className="text-xs text-gray-600">{p.level_label || p.class_level}</span>}
+                      {(p.subject_label || p.subject) && <span className="text-xs text-gray-600">· {p.subject_label || p.subject}</span>}
                     </div>
                   </div>
                 </div>
               </Td>
-              <Td><span className="text-gray-400 text-xs">{p.category}</span></Td>
+              <Td>
+                <div className="text-xs">
+                  <span className="text-gray-300">{p.subcategory || p.category}</span>
+                  <span className="block text-gray-600">
+                    {p.category}{p.stage ? ` · ${p.stage}` : ''}
+                  </span>
+                </div>
+              </Td>
               <Td><span className="text-white font-semibold">{fmt(p.price)}</span></Td>
               <Td>
                 <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${

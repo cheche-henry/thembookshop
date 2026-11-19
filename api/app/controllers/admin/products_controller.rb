@@ -10,6 +10,11 @@ module Admin
       products = Product
                  .with_attached_image
                  .by_category(params[:category])
+                 .by_subcategory(params[:subcategory])
+                 .by_subject(params[:subject])
+                 .by_subsubject(params[:subsubject])
+                 .by_stage(params[:stage])
+                 .by_level(params[:class_level])
                  .search(params[:q])
                  .order(created_at: :desc)
                  .page(params[:page])
@@ -140,10 +145,26 @@ module Admin
     end
 
     def product_params
-      params.require(:product).permit(
-        :name, :description, :price, :category, :class_level,
-        :subject, :stock_quantity, :active, :badge, :sort_order
+      attrs = params.require(:product).permit(
+        :name, :description, :price, :category, :subcategory, :class_level,
+        :subject, :subsubject, :stage, :stock_quantity, :active, :badge,
+        :sort_order, class_levels: []
       )
+
+      # The storefront reads class_levels; class_level is the legacy single-value
+      # column kept in sync so older queries and exports keep working.
+      if attrs.key?(:class_levels)
+        levels = Array(attrs[:class_levels]).compact_blank
+        attrs[:class_levels] = levels
+        attrs[:class_level]  = levels.first
+      end
+
+      # Form inputs submit "" to clear a value; store a real NULL instead.
+      %i[subject subsubject stage].each do |key|
+        attrs[key] = nil if attrs.key?(key) && attrs[key].blank?
+      end
+
+      attrs
     end
 
     def attach_image(product)

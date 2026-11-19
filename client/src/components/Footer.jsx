@@ -1,5 +1,14 @@
 import { Link } from 'react-router-dom'
 import { BookOpen, Phone, MapPin, Mail } from 'lucide-react'
+const categoryLinks = [
+  { label: 'Textbooks',             to: '/shop?category=Books&subcategory=Textbooks' },
+  { label: 'Revision & Exam Prep',  to: '/shop?subcategory=Revision+%26+Exam+Prep' },
+  { label: 'Set Books & Literature', to: '/shop?subcategory=Set+Books+%26+Literature' },
+  { label: 'Exercise Books',        to: '/shop?subcategory=Exercise+Books+%26+Notebooks' },
+  { label: 'Writing & Correction',  to: '/shop?subcategory=Writing+%26+Correction' },
+  { label: 'Math Sets',             to: '/shop?subcategory=Math+Sets+%26+Technical+Drawing' },
+]
+
 export default function Footer() {
   return (
     <footer className="bg-gray-900 text-gray-300 mt-20">
@@ -23,8 +32,8 @@ export default function Footer() {
           <div>
             <h3 className="font-bold text-white mb-4" style={{fontFamily:'Nunito,sans-serif'}}>Categories</h3>
             <ul className="space-y-2 text-sm">
-              {['Primary Books','Secondary Books','Revision Guides','Exercise Books','School Bags','Geometry Sets'].map(c=>(
-                <li key={c}><Link to="/shop" className="hover:text-green-400 transition-colors">{c}</Link></li>
+              {categoryLinks.map((c) => (
+                <li key={c.label}><Link to={c.to} className="hover:text-green-400 transition-colors">{c.label}</Link></li>
               ))}
             </ul>
           </div>

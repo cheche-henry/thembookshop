@@ -12,18 +12,28 @@ export default function ShopPage() {
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false)
 
   // Read initial values from URL params
-  const initialSearch   = searchParams.get('search') || ''
-  const initialCategory = searchParams.get('category') || 'all'
+  const initial = {
+    search:      searchParams.get('search') || '',
+    category:    searchParams.get('category') || 'all',
+    subcategory: searchParams.get('subcategory') || 'all',
+    stage:       searchParams.get('stage') || 'all',
+    classLevel:  searchParams.get('class_level') || 'all',
+    subject:     searchParams.get('subject') || 'all',
+    subsubject:  searchParams.get('subsubject') || 'all',
+  }
 
   const {
     search, setSearch,
     category, setCategory,
+    subcategory, setSubcategory,
+    stage, setStage,
     classLevel, setClassLevel,
     subject, setSubject,
+    subsubject, setSubsubject,
     products, loading, error,
-    meta, page, setPage,
+    meta, facets, page, setPage,
     reset, hasFilters,
-  } = useFilters(initialSearch, initialCategory)
+  } = useFilters(initial)
 
   return (
     <div className="page-enter max-w-7xl mx-auto px-4 sm:px-6 py-8">
@@ -73,8 +83,11 @@ export default function ShopPage() {
       {hasFilters && (
         <div className="flex flex-wrap gap-2 mb-4">
           {category !== 'all' && <Chip label={category} onRemove={() => setCategory('all')} />}
+          {subcategory !== 'all' && <Chip label={subcategory} onRemove={() => setSubcategory('all')} />}
+          {stage !== 'all' && <Chip label={stage} onRemove={() => setStage('all')} />}
           {classLevel !== 'all' && <Chip label={classLevel} onRemove={() => setClassLevel('all')} />}
           {subject !== 'all' && <Chip label={subject} onRemove={() => setSubject('all')} />}
+          {subsubject !== 'all' && <Chip label={subsubject} onRemove={() => setSubsubject('all')} />}
           {search && <Chip label={`"${search}"`} onRemove={() => setSearch('')} />}
           <button onClick={reset} className="text-xs text-gray-400 hover:text-red-500 underline font-display">
             Clear all
@@ -86,8 +99,12 @@ export default function ShopPage() {
         {/* Sidebar */}
         <FilterSidebar
           category={category} setCategory={setCategory}
+          subcategory={subcategory} setSubcategory={setSubcategory}
+          stage={stage} setStage={setStage}
           classLevel={classLevel} setClassLevel={setClassLevel}
           subject={subject} setSubject={setSubject}
+          subsubject={subsubject} setSubsubject={setSubsubject}
+          facets={facets}
           hasFilters={hasFilters} reset={reset}
           mobileOpen={mobileFiltersOpen}
           setMobileOpen={setMobileFiltersOpen}

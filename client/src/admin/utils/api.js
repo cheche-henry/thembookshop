@@ -65,6 +65,7 @@ export const api = {
     removeImage: (id)          => request(`/admin/products/${id}/remove_image`, { method: 'DELETE' }),
     restock:     (id, qty)     => request(`/admin/products/${id}/restock`, { method: 'PATCH', body: JSON.stringify({ quantity: qty }) }),
     lowStock:    ()            => request('/admin/products/low_stock'),
+    catalogueMeta: ()          => request('/api/v1/products/meta'),
   },
 
   // ── Orders ────────────────────────────────────────────────────────────────

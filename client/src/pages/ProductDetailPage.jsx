@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom'
 import { ShoppingCart, Plus, Minus, Tag, BookOpen, GraduationCap, ChevronRight, AlertCircle } from 'lucide-react'
 import { useCartStore } from '../context/cartStore'
 import { formatKES, badgeColor } from '../utils/format'
+import { productLevel, productSubject } from '../utils/catalogue'
 import ProductCard from '../components/ProductCard'
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3000'
@@ -33,7 +34,11 @@ export default function ProductDetailPage() {
         if (cancelled) return
         setProduct(data.data)
 
-        const relRes = await fetch(`${API_BASE}/api/v1/products?category=${encodeURIComponent(data.data.category)}&per_page=5`)
+        const relatedParams = new URLSearchParams({ per_page: '6' })
+        if (data.data.subcategory) relatedParams.set('subcategory', data.data.subcategory)
+        else if (data.data.category) relatedParams.set('category', data.data.category)
+
+        const relRes = await fetch(`${API_BASE}/api/v1/products?${relatedParams}`)
         const relData = await relRes.json()
         if (!cancelled) setRelated((relData.data || []).filter(p => p.id !== Number(id)).slice(0, 4))
       } catch (e) {
@@ -74,6 +79,9 @@ export default function ProductDetailPage() {
       <Link to="/shop" className="btn-primary">Back to Shop</Link>
     </div>
   )
+
+  const levelLabel   = productLevel(product)
+  const subjectLabel = productSubject(product)
 
   return (
     <div className="page-enter max-w-7xl mx-auto px-4 sm:px-6 py-8">
@@ -119,16 +127,21 @@ export default function ProductDetailPage() {
         <div>
           <div className="flex flex-wrap gap-2 mb-3">
             <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-gray-100 text-gray-500">
-              <Tag className="w-3 h-3 mr-1" />{product.category}
+              <Tag className="w-3 h-3 mr-1" />{product.subcategory || product.category}
             </span>
-            {product.class_level && (
+            {levelLabel && (
               <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-sky-100 text-sky-700">
-                <GraduationCap className="w-3 h-3 mr-1" />{product.class_level}
+                <GraduationCap className="w-3 h-3 mr-1" />{levelLabel}
               </span>
             )}
-            {product.subject && (
+            {product.stage && (
+              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-indigo-100 text-indigo-700">
+                {product.stage}
+              </span>
+            )}
+            {subjectLabel && (
               <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-700">
-                <BookOpen className="w-3 h-3 mr-1" />{product.subject}
+                <BookOpen className="w-3 h-3 mr-1" />{subjectLabel}
               </span>
             )}
           </div>

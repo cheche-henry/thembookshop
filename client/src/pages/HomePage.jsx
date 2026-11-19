@@ -9,21 +9,21 @@ const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3000'
 const featuredCategories = [
   {
     title: 'Primary School', subtitle: 'Grade 1 – 6',
-    description: 'CBC-aligned textbooks and materials for junior learners',
+    description: 'CBC-aligned textbooks, readers and workbooks for lower and upper primary',
     emoji: '📚', bg: 'bg-sky-50',
-    link: '/shop?category=Textbooks',
+    link: '/shop?category=Books&subcategory=Textbooks',
   },
   {
     title: 'Secondary School', subtitle: 'Form 1 – 4',
-    description: 'KCSE prep books, textbooks, and revision guides',
+    description: 'KCSE revision guides, set books and coursebooks',
     emoji: '🎓', bg: 'bg-green-50',
-    link: '/shop?category=Revision+Books',
+    link: '/shop?category=Books&subcategory=Revision+%26+Exam+Prep',
   },
   {
     title: 'Stationery', subtitle: 'All Grades',
-    description: 'Exercise books, pens, geometry sets, school bags & more',
+    description: 'Exercise books, pens, maths sets, files, calculators & more',
     emoji: '✏️', bg: 'bg-amber-50',
-    link: '/shop?category=Exercise+Books',
+    link: '/shop?category=Stationery',
   },
 ]
 
@@ -78,7 +78,7 @@ export default function HomePage() {
               <Link to="/shop" className="inline-flex items-center gap-2 bg-white text-green-700 font-bold px-6 py-3 rounded-xl hover:bg-green-50 transition-colors shadow-lg" style={{fontFamily:'Nunito,sans-serif'}}>
                 Shop Now <ArrowRight className="w-4 h-4" />
               </Link>
-              <Link to="/shop?category=Revision+Books" className="inline-flex items-center gap-2 bg-white/20 hover:bg-white/30 text-white font-semibold px-6 py-3 rounded-xl transition-colors border border-white/30" style={{fontFamily:'Nunito,sans-serif'}}>
+              <Link to="/shop?subcategory=Revision+%26+Exam+Prep" className="inline-flex items-center gap-2 bg-white/20 hover:bg-white/30 text-white font-semibold px-6 py-3 rounded-xl transition-colors border border-white/30" style={{fontFamily:'Nunito,sans-serif'}}>
                 Revision Books
               </Link>
             </div>

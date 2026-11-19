@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom'
 import { ShoppingCart, Plus, Minus, Tag, BookOpen } from 'lucide-react'
 import { useCartStore } from '../context/cartStore'
 import { formatKES, badgeColor } from '../utils/format'
+import { productLevel, productSubject } from '../utils/catalogue'
 import { useState } from 'react'
 
 export default function ProductCard({ product }) {
@@ -11,7 +12,9 @@ export default function ProductCard({ product }) {
   const removeFromCart  = useCartStore((s) => s.removeFromCart)
   const [imgError, setImgError] = useState(false)
 
-  const cartItem = items.find((i) => i.id === product.id)
+  const cartItem     = items.find((i) => i.id === product.id)
+  const levelLabel   = productLevel(product)
+  const subjectLabel = productSubject(product)
 
   const handleAdd = (e) => {
     e.preventDefault()
@@ -74,16 +77,16 @@ export default function ProductCard({ product }) {
 
         <div className="flex flex-wrap gap-1">
           <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-gray-100 text-gray-500">
-            <Tag className="w-3 h-3 mr-1" />{product.category}
+            <Tag className="w-3 h-3 mr-1" />{product.subcategory || product.category}
           </span>
-          {product.class_level && (
+          {levelLabel && (
             <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-sky-50 text-sky-600">
-              {product.class_level}
+              {levelLabel}
             </span>
           )}
-          {product.subject && (
+          {subjectLabel && (
             <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-green-50 text-green-600">
-              {product.subject}
+              {subjectLabel}
             </span>
           )}
         </div>

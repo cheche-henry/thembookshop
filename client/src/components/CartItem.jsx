@@ -22,7 +22,10 @@ export default function CartItem({ item }) {
       </Link>
       <div className="flex-1 min-w-0">
         <Link to={`/product/${item.id}`}><h3 className="font-bold text-gray-800 text-sm leading-snug hover:text-green-600 transition-colors line-clamp-2" style={{fontFamily:'Nunito,sans-serif'}}>{item.name}</h3></Link>
-        <p className="text-xs text-gray-400 mt-0.5">{item.category}{item.class_level ? ` · ${item.class_level}` : ''}</p>
+        <p className="text-xs text-gray-400 mt-0.5">
+          {item.subcategory || item.category}
+          {(item.level_label || item.class_level) ? ` · ${item.level_label || item.class_level}` : ''}
+        </p>
         {stock !== null && stock > 0 && stock <= 10 && (
           <p className="text-xs text-amber-600 mt-1">Only {stock} left in stock</p>
         )}

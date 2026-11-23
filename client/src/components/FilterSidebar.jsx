@@ -1,36 +1,35 @@
-import { X, SlidersHorizontal } from 'lucide-react'
+import { useEffect } from 'react'
+import { X } from 'lucide-react'
 import { TAXONOMY, DEPARTMENTS, STAGES, SUBJECTS, SUBJECT_COMPONENTS } from '../utils/catalogue'
 
 const ALL = 'all'
 
-function Option({ active, onClick, label, count }) {
+function Option({ active, onClick, label, count, depth = 0 }) {
   return (
     <button
+      type="button"
       onClick={onClick}
-      className={`w-full flex items-center justify-between gap-2 px-3 py-2 rounded-xl text-sm transition-colors ${
+      className={`flex w-full items-center justify-between gap-2 rounded-sm px-2 py-1.5 text-left text-[13px] transition-colors ${
+        depth ? 'pl-4' : ''
+      } ${
         active
-          ? 'bg-green-600 text-white font-semibold'
-          : 'text-gray-600 hover:bg-green-50 hover:text-green-700'
+          ? 'bg-brand-50 font-medium text-brand-800'
+          : 'text-body hover:bg-muted-surface hover:text-ink'
       }`}
+      aria-pressed={active}
     >
-      <span className="truncate text-left">{label}</span>
-      {count > 0 && (
-        <span className={`text-xs font-semibold flex-shrink-0 ${active ? 'text-white/80' : 'text-gray-400'}`}>
-          {count}
-        </span>
-      )}
+      <span className="truncate">{label}</span>
+      {count > 0 && <span className="flex-shrink-0 text-[11px] tabular-nums text-muted">{count}</span>}
     </button>
   )
 }
 
 function Section({ title, children }) {
   return (
-    <div className="mb-6">
-      <h4 className="font-bold text-gray-700 text-sm mb-2" style={{ fontFamily: 'Nunito,sans-serif' }}>
-        {title}
-      </h4>
-      <div className="space-y-1">{children}</div>
-    </div>
+    <section className="border-b border-line py-5 first:pt-0 last:border-b-0">
+      <h4 className="eyebrow mb-2">{title}</h4>
+      <div className="space-y-0.5">{children}</div>
+    </section>
   )
 }
 
@@ -72,6 +71,18 @@ export default function FilterSidebar({
   const counts = countMaps(facets)
   const hasFacets = Boolean(facets)
 
+  useEffect(() => {
+    if (!mobileOpen) return undefined
+    const previous = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    const onKeyDown = (event) => { if (event.key === 'Escape') setMobileOpen(false) }
+    document.addEventListener('keydown', onKeyDown)
+    return () => {
+      document.body.style.overflow = previous
+      document.removeEventListener('keydown', onKeyDown)
+    }
+  }, [mobileOpen, setMobileOpen])
+
   // When the API reports counts, hide shelves with no stock so every option
   // in the sidebar leads to a non-empty result page.
   const departments = hasFacets
@@ -83,8 +94,7 @@ export default function FilterSidebar({
     return (counts.subcategory[`${category}::${name}`] || 0) > 0
   })
 
-  const stages = STAGES
-  const stageGroups = Object.entries(stages)
+  const stageGroups = Object.entries(STAGES)
     .map(([stageName, levels]) => [
       stageName,
       hasFacets ? levels.filter((level) => (counts.level[level] || 0) > 0) : levels,
@@ -95,17 +105,15 @@ export default function FilterSidebar({
     ? SUBJECTS.filter((name) => (counts.subject[name] || 0) > 0)
     : SUBJECTS
 
-  const Content = (
+  const content = (
     <div>
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-2">
-          <SlidersHorizontal className="w-4 h-4 text-green-600" />
-          <h3 className="font-bold text-gray-800" style={{ fontFamily: 'Nunito,sans-serif' }}>Filters</h3>
-        </div>
+      <div className="mb-4 flex items-center justify-between">
+        <h3 className="text-sm font-semibold text-ink">Filter</h3>
         {hasFilters && (
           <button
+            type="button"
             onClick={reset}
-            className="text-xs text-green-600 hover:text-green-800 font-semibold underline"
+            className="text-xs text-muted underline-offset-4 hover:text-ink hover:underline"
           >
             Clear all
           </button>
@@ -113,11 +121,7 @@ export default function FilterSidebar({
       </div>
 
       <Section title="Department">
-        <Option
-          active={category === ALL}
-          onClick={() => setCategory(ALL)}
-          label="All Products"
-        />
+        <Option active={category === ALL} onClick={() => setCategory(ALL)} label="All products" />
         {departments.map((name) => (
           <div key={name}>
             <Option
@@ -127,11 +131,12 @@ export default function FilterSidebar({
               count={counts.category[name]}
             />
             {category === name && subcategories.length > 0 && (
-              <div className="mt-1 ml-2 pl-2 border-l border-gray-100 space-y-1">
+              <div className="mt-0.5 space-y-0.5">
                 <Option
                   active={subcategory === ALL}
                   onClick={() => setSubcategory(ALL)}
                   label={`All ${name}`}
+                  depth={1}
                 />
                 {subcategories.map((sub) => (
                   <Option
@@ -140,6 +145,7 @@ export default function FilterSidebar({
                     onClick={() => setSubcategory(sub)}
                     label={sub}
                     count={counts.subcategory[`${name}::${sub}`]}
+                    depth={1}
                   />
                 ))}
               </div>
@@ -148,18 +154,16 @@ export default function FilterSidebar({
         ))}
       </Section>
 
-      <Section title="School Level">
+      <Section title="School level">
         <Option
           active={classLevel === ALL && stage === ALL}
           onClick={() => setClassLevel(ALL)}
-          label="All Levels"
+          label="All levels"
         />
         {stageGroups.map(([stageName, levels]) => (
-          <div key={stageName} className="pt-2">
-            <p className="px-3 text-xs font-semibold uppercase tracking-wide text-gray-400 mb-1">
-              {stageName}
-            </p>
-            <div className="grid grid-cols-2 gap-1">
+          <div key={stageName} className="pt-3">
+            <p className="px-2 pb-1 text-[11px] font-medium text-muted">{stageName}</p>
+            <div className="grid grid-cols-2 gap-x-1">
               {levels.map((level) => (
                 <Option
                   key={level}
@@ -176,10 +180,8 @@ export default function FilterSidebar({
         {/* Stage-wide reference books (atlases, tables) carry a stage but no
             single class level, so they get their own control. */}
         {hasFacets && (facets?.stages || []).length > 0 && (
-          <div className="pt-3 mt-2 border-t border-gray-100">
-            <p className="px-3 text-xs font-semibold uppercase tracking-wide text-gray-400 mb-1">
-              Stage-wide references
-            </p>
+          <div className="mt-3 border-t border-line pt-3">
+            <p className="px-2 pb-1 text-[11px] font-medium text-muted">Stage-wide</p>
             {facets.stages.map((entry) => (
               <Option
                 key={entry.name}
@@ -197,7 +199,7 @@ export default function FilterSidebar({
         <Option
           active={subject === ALL}
           onClick={() => setSubject(ALL)}
-          label="All Subjects"
+          label="All subjects"
         />
         {subjectList.map((name) => (
           <div key={name}>
@@ -208,7 +210,7 @@ export default function FilterSidebar({
               count={counts.subject[name]}
             />
             {subject === name && (SUBJECT_COMPONENTS[name] || []).length > 0 && (
-              <div className="mt-1 ml-2 pl-2 border-l border-gray-100 space-y-1">
+              <div className="mt-0.5 space-y-0.5">
                 {(SUBJECT_COMPONENTS[name] || [])
                   .filter((comp) => !hasFacets || (counts.component[`${name}::${comp}`] || 0) > 0)
                   .map((comp) => (
@@ -218,6 +220,7 @@ export default function FilterSidebar({
                       onClick={() => setSubsubject(comp)}
                       label={comp}
                       count={counts.component[`${name}::${comp}`]}
+                      depth={1}
                     />
                   ))}
               </div>
@@ -230,22 +233,42 @@ export default function FilterSidebar({
 
   return (
     <>
-      <aside className="hidden lg:block w-56 flex-shrink-0">
-        <div className="sticky top-24 bg-white rounded-2xl shadow-sm p-5 max-h-[calc(100vh-7rem)] overflow-y-auto">
-          {Content}
+      <aside className="hidden w-60 flex-shrink-0 lg:block">
+        <div className="sticky top-[88px] max-h-[calc(100vh-7rem)] overflow-y-auto pr-2">
+          {content}
         </div>
       </aside>
+
       {mobileOpen && (
-        <div className="lg:hidden fixed inset-0 z-50 flex">
-          <div className="absolute inset-0 bg-black/40" onClick={() => setMobileOpen(false)} />
-          <div className="relative bg-white w-72 h-full overflow-y-auto p-5 shadow-xl">
-            <button
-              onClick={() => setMobileOpen(false)}
-              className="absolute top-4 right-4 p-2 hover:bg-gray-100 rounded-xl transition-colors"
-            >
-              <X className="w-5 h-5 text-gray-500" />
-            </button>
-            {Content}
+        <div className="fixed inset-0 z-50 flex lg:hidden" role="dialog" aria-modal="true" aria-label="Filters">
+          <button
+            type="button"
+            className="absolute inset-0 cursor-default bg-ink/40"
+            onClick={() => setMobileOpen(false)}
+            aria-label="Close filters"
+          />
+          <div className="relative flex h-full w-[86%] max-w-sm flex-col bg-surface">
+            <div className="flex items-center justify-between border-b border-line px-5 py-3">
+              <p className="text-sm font-semibold text-ink">Filters</p>
+              <button
+                type="button"
+                onClick={() => setMobileOpen(false)}
+                className="-m-1.5 rounded-md p-1.5 text-muted hover:bg-muted-surface hover:text-ink"
+                aria-label="Close filters"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto px-5 py-4">{content}</div>
+            <div className="border-t border-line p-4">
+              <button
+                type="button"
+                onClick={() => setMobileOpen(false)}
+                className="h-11 w-full rounded-md bg-brand-700 text-sm font-medium text-white"
+              >
+                Show results
+              </button>
+            </div>
           </div>
         </div>
       )}

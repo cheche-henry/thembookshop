@@ -1,12 +1,15 @@
-import { useState, useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
-import { ArrowLeft, ChevronRight, Phone, MapPin, Mail, Package, CreditCard, RefreshCw, XCircle } from 'lucide-react'
+import {
+  ArrowLeft, ChevronRight, CreditCard, Mail, MapPin, Package, Phone, XCircle,
+} from 'lucide-react'
 import { api } from '../utils/api'
+import { useToast } from '../../components/ui/Toast'
 import StatusBadge from '../components/StatusBadge'
-import { Btn } from '../components/AdminInput'
-import Modal from '../components/Modal'
+import { Button } from '../../components/ui/Button'
+import Modal from '../../components/ui/Modal'
 
-const fmt = (n) => `KES ${Number(n || 0).toLocaleString('en-KE')}`
+const fmt = (value) => `KES ${Number(value || 0).toLocaleString('en-KE')}`
 
 const TRANSITIONS = {
   pending:           ['payment_initiated', 'paid', 'failed', 'cancelled'],
@@ -19,32 +22,36 @@ const TRANSITIONS = {
 }
 
 const STATUS_LABELS = {
-  payment_initiated: 'Mark as Awaiting Payment',
-  paid:              'Mark as Paid',
-  processing:        'Mark as Processing',
-  completed:         'Mark as Completed',
-  failed:            'Mark as Failed',
-  pending:           'Reset to Pending',
-  cancelled:         'Cancel Order',
+  payment_initiated: 'Mark awaiting payment',
+  paid:              'Mark as paid',
+  processing:        'Mark as processing',
+  completed:         'Mark as completed',
+  failed:            'Mark as failed',
+  pending:           'Reset to pending',
+  cancelled:         'Cancel order',
 }
 
 export default function OrderDetailPage() {
-  const { id }              = useParams()
-  const navigate            = useNavigate()
-  const [order, setOrder]   = useState(null)
+  const { id } = useParams()
+  const navigate = useNavigate()
+  const { toast } = useToast()
+
+  const [order, setOrder] = useState(null)
   const [loading, setLoading] = useState(true)
-  const [error, setError]   = useState(null)
+  const [error, setError] = useState(null)
   const [updating, setUpdating] = useState(false)
   const [cancelModal, setCancelModal] = useState(false)
   const [cancelReason, setCancelReason] = useState('')
 
   const load = async () => {
     setLoading(true)
+    setError(null)
     try {
       const res = await api.orders.get(id)
       setOrder(res.data)
-    } catch (e) {
-      setError(e.message)
+      document.title = `${res.data.reference} | Them Bookshop Admin`
+    } catch (loadError) {
+      setError(loadError.message)
     } finally {
       setLoading(false)
     }
@@ -53,13 +60,18 @@ export default function OrderDetailPage() {
   useEffect(() => { load() }, [id])
 
   const handleStatusChange = async (status) => {
-    if (status === 'cancelled') { setCancelModal(true); return }
+    if (status === 'cancelled') {
+      setCancelModal(true)
+      return
+    }
+
     setUpdating(true)
     try {
       const res = await api.orders.updateStatus(id, status)
       setOrder(res.data)
-    } catch (e) {
-      alert(e.message)
+      toast({ title: 'Order updated', description: `Status set to ${status.replace(/_/g, ' ')}.` })
+    } catch (updateError) {
+      toast({ title: 'Status could not be updated', description: updateError.message, tone: 'error' })
     } finally {
       setUpdating(false)
     }
@@ -71,240 +83,251 @@ export default function OrderDetailPage() {
       const res = await api.orders.cancel(id, cancelReason)
       setOrder(res.data)
       setCancelModal(false)
-    } catch (e) {
-      alert(e.message)
+      setCancelReason('')
+      toast({ title: 'Order cancelled', description: 'Stock has been restored.' })
+    } catch (cancelError) {
+      toast({ title: 'Order could not be cancelled', description: cancelError.message, tone: 'error' })
     } finally {
       setUpdating(false)
     }
   }
 
-  if (loading) return (
-    <div className="space-y-4 animate-pulse">
-      <div className="h-6 bg-white/5 rounded w-48" />
-      <div className="h-48 bg-white/5 rounded-2xl" />
-      <div className="h-64 bg-white/5 rounded-2xl" />
-    </div>
-  )
+  if (loading) {
+    return (
+      <div className="max-w-5xl space-y-4" aria-busy="true">
+        <div className="skeleton h-5 w-48 rounded-sm" />
+        <div className="skeleton h-28 rounded-md" />
+        <div className="skeleton h-72 rounded-md" />
+      </div>
+    )
+  }
 
-  if (error) return (
-    <div className="flex flex-col items-center justify-center h-64 gap-3">
-      <XCircle className="w-10 h-10 text-red-400" />
-      <p className="text-red-400">{error}</p>
-      <Link to="/admin/orders" className="text-sm text-gray-400 hover:text-white">← Back to orders</Link>
-    </div>
-  )
+  if (error) {
+    return (
+      <div className="mx-auto max-w-md border border-line bg-surface p-8 text-center">
+        <XCircle className="mx-auto h-8 w-8 text-danger" aria-hidden="true" />
+        <p className="mt-3 text-sm text-muted">{error}</p>
+        <div className="mt-5 flex justify-center gap-3">
+          <Button variant="secondary" onClick={load}>Try again</Button>
+          <Button variant="ghost" onClick={() => navigate('/admin/orders')}>Back to orders</Button>
+        </div>
+      </div>
+    )
+  }
 
   const nextStatuses = TRANSITIONS[order.status] || []
   const payment = order.payments?.[order.payments.length - 1]
 
   return (
-    <div className="space-y-6 max-w-4xl">
-      {/* Breadcrumb */}
-      <div className="flex items-center gap-2 text-sm">
-        <Link to="/admin/orders" className="text-gray-500 hover:text-green-400 transition-colors flex items-center gap-1">
-          <ArrowLeft className="w-4 h-4" /> Orders
+    <div className="max-w-5xl space-y-6">
+      <nav className="flex items-center gap-1.5 text-xs text-muted" aria-label="Breadcrumb">
+        <Link to="/admin/orders" className="inline-flex items-center gap-1 hover:text-ink">
+          <ArrowLeft className="h-3.5 w-3.5" aria-hidden="true" /> Orders
         </Link>
-        <ChevronRight className="w-4 h-4 text-gray-700" />
-        <span className="text-gray-300 font-mono">{order.reference}</span>
-      </div>
+        <ChevronRight className="h-3.5 w-3.5" aria-hidden="true" />
+        <span className="font-mono text-ink">{order.reference}</span>
+      </nav>
 
-      {/* Header */}
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <div className="flex items-center gap-3 mb-1">
-            <h1 className="text-white font-bold text-2xl font-mono">{order.reference}</h1>
+          <div className="flex flex-wrap items-center gap-2.5">
+            <h1 className="font-mono text-2xl font-semibold text-ink">{order.reference}</h1>
             <StatusBadge status={order.status} size="md" />
           </div>
-          <p className="text-gray-500 text-sm">
+          <p className="mt-1 text-sm text-muted">
             Placed {new Date(order.created_at).toLocaleString('en-KE', { dateStyle: 'long', timeStyle: 'short' })}
           </p>
         </div>
 
-        {/* Status actions */}
         {nextStatuses.length > 0 && (
           <div className="flex flex-wrap gap-2">
-            {nextStatuses.map(s => (
-              <Btn
-                key={s}
-                variant={s === 'cancelled' ? 'danger' : s === 'completed' ? 'primary' : 'secondary'}
-                onClick={() => handleStatusChange(s)}
-                loading={updating}
+            {nextStatuses.map((status) => (
+              <Button
+                key={status}
+                size="sm"
+                variant={status === 'cancelled' ? 'danger-ghost' : status === 'completed' ? 'primary' : 'secondary'}
+                onClick={() => handleStatusChange(status)}
+                disabled={updating}
               >
-                {STATUS_LABELS[s] || s}
-              </Btn>
+                {STATUS_LABELS[status] || status}
+              </Button>
             ))}
           </div>
         )}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left column */}
-        <div className="lg:col-span-2 space-y-5">
-          {/* Order items */}
-          <div className="bg-gray-900 border border-white/10 rounded-2xl overflow-hidden">
-            <div className="px-5 py-4 border-b border-white/10">
-              <h2 className="text-white font-semibold flex items-center gap-2">
-                <Package className="w-4 h-4 text-green-400" /> Order Items
+      <div className="grid gap-6 lg:grid-cols-3">
+        <div className="space-y-5 lg:col-span-2">
+          <section className="border border-line bg-surface">
+            <div className="border-b border-line px-5 py-3.5">
+              <h2 className="flex items-center gap-2 text-sm font-semibold text-ink">
+                <Package className="h-4 w-4 text-muted" aria-hidden="true" /> Order items
               </h2>
             </div>
-            <div className="divide-y divide-white/5">
-              {order.order_items?.map(item => (
-                <div key={item.id} className="flex items-center gap-4 px-5 py-4">
-                  <div className="w-12 h-12 bg-white/5 rounded-xl flex-shrink-0 overflow-hidden">
-                    {item.product?.image_url
-                      ? <img src={item.product.image_url} alt={item.product_name_snapshot} className="w-full h-full object-cover" />
-                      : <Package className="w-5 h-5 text-gray-600 m-auto mt-3" />
-                    }
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-white font-medium text-sm">{item.product_name_snapshot}</p>
-                    <p className="text-gray-500 text-xs">Qty: {item.quantity} × {fmt(item.unit_price)}</p>
-                  </div>
-                  <span className="text-white font-semibold text-sm">{fmt(item.total_price)}</span>
-                </div>
-              ))}
-            </div>
-            <div className="px-5 py-4 border-t border-white/10 space-y-2">
-              <div className="flex justify-between text-sm text-gray-400">
-                <span>Subtotal</span><span>{fmt(order.subtotal)}</span>
-              </div>
-              <div className="flex justify-between text-sm text-gray-400">
-                <span>Delivery</span>
-                <span className={order.delivery_fee == 0 ? 'text-green-400' : ''}>{order.delivery_fee == 0 ? 'FREE' : fmt(order.delivery_fee)}</span>
-              </div>
-              <div className="flex justify-between text-base font-bold text-white border-t border-white/10 pt-2">
-                <span>Total</span><span>{fmt(order.total_amount)}</span>
-              </div>
-            </div>
-          </div>
 
-          {/* Payment info */}
+            <ul className="divide-y divide-line">
+              {order.order_items?.map((item) => (
+                <li key={item.id} className="flex items-center gap-3 px-5 py-3.5">
+                  <div className="h-14 w-10 flex-shrink-0 overflow-hidden border border-line bg-muted-surface">
+                    {item.product?.image_url ? (
+                      <img src={item.product.image_url} alt="" className="h-full w-full object-contain" />
+                    ) : (
+                      <div className="flex h-full w-full items-center justify-center">
+                        <Package className="h-4 w-4 text-line-strong" aria-hidden="true" />
+                      </div>
+                    )}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[13px] font-medium text-ink">{item.product_name_snapshot}</p>
+                    <p className="mt-0.5 text-xs text-muted">Qty {item.quantity} × {fmt(item.unit_price)}</p>
+                  </div>
+                  <span className="flex-shrink-0 text-[13px] font-medium tabular-nums text-ink">{fmt(item.total_price)}</span>
+                </li>
+              ))}
+            </ul>
+
+            <dl className="space-y-1.5 border-t border-line px-5 py-4 text-sm">
+              <div className="flex justify-between text-muted">
+                <dt>Subtotal</dt><dd className="tabular-nums">{fmt(order.subtotal)}</dd>
+              </div>
+              <div className="flex justify-between text-muted">
+                <dt>Delivery</dt>
+                <dd className={order.delivery_fee == 0 ? 'text-success' : 'tabular-nums'}>
+                  {order.delivery_fee == 0 ? 'Free' : fmt(order.delivery_fee)}
+                </dd>
+              </div>
+              <div className="flex justify-between border-t border-line pt-2 font-medium text-ink">
+                <dt>Total</dt><dd className="tabular-nums">{fmt(order.total_amount)}</dd>
+              </div>
+            </dl>
+          </section>
+
           {payment && (
-            <div className="bg-gray-900 border border-white/10 rounded-2xl overflow-hidden">
-              <div className="px-5 py-4 border-b border-white/10">
-                <h2 className="text-white font-semibold flex items-center gap-2">
-                  <CreditCard className="w-4 h-4 text-green-400" /> Payment
+            <section className="border border-line bg-surface">
+              <div className="border-b border-line px-5 py-3.5">
+                <h2 className="flex items-center gap-2 text-sm font-semibold text-ink">
+                  <CreditCard className="h-4 w-4 text-muted" aria-hidden="true" /> Payment
                 </h2>
               </div>
-              <div className="px-5 py-4 grid grid-cols-2 gap-4 text-sm">
+              <dl className="grid grid-cols-2 gap-4 px-5 py-4 text-sm">
                 <div>
-                  <p className="text-gray-500 text-xs uppercase tracking-wide mb-1">Status</p>
-                  <span className={`font-semibold ${payment.status === 'completed' ? 'text-green-400' : payment.status === 'failed' ? 'text-red-400' : 'text-amber-400'}`}>
-                    {payment.status.charAt(0).toUpperCase() + payment.status.slice(1)}
-                  </span>
+                  <dt className="text-[11px] font-medium uppercase tracking-[0.06em] text-muted">Status</dt>
+                  <dd className="mt-1 font-medium text-ink">{payment.status.charAt(0).toUpperCase() + payment.status.slice(1)}</dd>
                 </div>
                 <div>
-                  <p className="text-gray-500 text-xs uppercase tracking-wide mb-1">Method</p>
-                  <p className="text-white font-semibold">M-Pesa</p>
+                  <dt className="text-[11px] font-medium uppercase tracking-[0.06em] text-muted">Method</dt>
+                  <dd className="mt-1 text-ink">M-Pesa</dd>
                 </div>
                 {payment.mpesa_receipt_number && (
                   <div>
-                    <p className="text-gray-500 text-xs uppercase tracking-wide mb-1">M-Pesa Receipt</p>
-                    <p className="text-green-400 font-mono font-semibold">{payment.mpesa_receipt_number}</p>
+                    <dt className="text-[11px] font-medium uppercase tracking-[0.06em] text-muted">Receipt</dt>
+                    <dd className="mt-1 font-mono text-ink">{payment.mpesa_receipt_number}</dd>
                   </div>
                 )}
                 <div>
-                  <p className="text-gray-500 text-xs uppercase tracking-wide mb-1">Phone</p>
-                  <p className="text-white">{payment.phone_number}</p>
+                  <dt className="text-[11px] font-medium uppercase tracking-[0.06em] text-muted">Phone</dt>
+                  <dd className="mt-1 text-ink">{payment.phone_number}</dd>
                 </div>
                 {payment.result_desc && (
                   <div className="col-span-2">
-                    <p className="text-gray-500 text-xs uppercase tracking-wide mb-1">M-Pesa Response</p>
-                    <p className="text-gray-400 text-xs">{payment.result_desc}</p>
+                    <dt className="text-[11px] font-medium uppercase tracking-[0.06em] text-muted">M-Pesa response</dt>
+                    <dd className="mt-1 text-xs leading-relaxed text-muted">{payment.result_desc}</dd>
                   </div>
                 )}
-              </div>
-            </div>
+              </dl>
+            </section>
           )}
         </div>
 
-        {/* Right column — customer info */}
         <div className="space-y-5">
-          <div className="bg-gray-900 border border-white/10 rounded-2xl overflow-hidden">
-            <div className="px-5 py-4 border-b border-white/10">
-              <h2 className="text-white font-semibold">Customer</h2>
+          <section className="border border-line bg-surface">
+            <div className="border-b border-line px-5 py-3.5">
+              <h2 className="text-sm font-semibold text-ink">Customer</h2>
             </div>
-            <div className="px-5 py-4 space-y-3">
-              <p className="text-white font-semibold">{order.customer_name}</p>
-              <div className="flex items-center gap-2 text-sm text-gray-400">
-                <Phone className="w-4 h-4 text-green-400 flex-shrink-0" />
-                <a href={`tel:${order.customer_phone}`} className="hover:text-green-400 transition-colors">{order.customer_phone}</a>
+            <div className="space-y-3 px-5 py-4">
+              <p className="text-sm font-medium text-ink">{order.customer_name}</p>
+              <div className="flex items-center gap-2 text-sm text-muted">
+                <Phone className="h-4 w-4 flex-shrink-0" aria-hidden="true" />
+                <a href={`tel:${order.customer_phone}`} className="hover:text-ink">{order.customer_phone}</a>
               </div>
               {order.customer_email && (
-                <div className="flex items-center gap-2 text-sm text-gray-400">
-                  <Mail className="w-4 h-4 text-green-400 flex-shrink-0" />
-                  <a href={`mailto:${order.customer_email}`} className="hover:text-green-400 transition-colors truncate">{order.customer_email}</a>
+                <div className="flex items-center gap-2 text-sm text-muted">
+                  <Mail className="h-4 w-4 flex-shrink-0" aria-hidden="true" />
+                  <a href={`mailto:${order.customer_email}`} className="truncate hover:text-ink">{order.customer_email}</a>
                 </div>
               )}
-              <div className="flex items-start gap-2 text-sm text-gray-400">
-                <MapPin className="w-4 h-4 text-green-400 flex-shrink-0 mt-0.5" />
+              <div className="flex items-start gap-2 text-sm text-muted">
+                <MapPin className="mt-0.5 h-4 w-4 flex-shrink-0" aria-hidden="true" />
                 <div>
-                  <p>{order.delivery_address}</p>
-                  {order.delivery_location && <p className="text-gray-600 text-xs mt-0.5">{order.delivery_location}</p>}
+                  <p className="text-body">{order.delivery_address}</p>
+                  {order.delivery_location && <p className="mt-0.5 text-xs">{order.delivery_location}</p>}
                 </div>
               </div>
               {order.notes && (
-                <div className="bg-white/5 rounded-xl p-3 text-xs text-gray-400 mt-2">
-                  <p className="text-gray-500 uppercase tracking-wide text-xs mb-1">Notes</p>
-                  {order.notes}
+                <div className="border-t border-line pt-3">
+                  <p className="text-[11px] font-medium uppercase tracking-[0.06em] text-muted">Notes</p>
+                  <p className="mt-1 text-xs leading-relaxed text-body">{order.notes}</p>
                 </div>
               )}
             </div>
-          </div>
+          </section>
 
-          {/* Timeline */}
-          <div className="bg-gray-900 border border-white/10 rounded-2xl overflow-hidden">
-            <div className="px-5 py-4 border-b border-white/10">
-              <h2 className="text-white font-semibold">Timeline</h2>
+          <section className="border border-line bg-surface">
+            <div className="border-b border-line px-5 py-3.5">
+              <h2 className="text-sm font-semibold text-ink">Timeline</h2>
             </div>
-            <div className="px-5 py-4">
-              <div className="space-y-3 text-sm">
-                <div className="flex items-center gap-3">
-                  <div className="w-2 h-2 bg-green-500 rounded-full flex-shrink-0" />
-                  <div>
-                    <p className="text-white">Order placed</p>
-                    <p className="text-gray-600 text-xs">{new Date(order.created_at).toLocaleString('en-KE')}</p>
-                  </div>
-                </div>
-                {payment?.created_at && (
-                  <div className="flex items-center gap-3">
-                    <div className={`w-2 h-2 rounded-full flex-shrink-0 ${payment.status === 'completed' ? 'bg-green-500' : 'bg-gray-600'}`} />
-                    <div>
-                      <p className="text-white">Payment {payment.status}</p>
-                      <p className="text-gray-600 text-xs">{new Date(payment.created_at).toLocaleString('en-KE')}</p>
-                    </div>
-                  </div>
-                )}
-                <div className="flex items-center gap-3">
-                  <div className={`w-2 h-2 rounded-full flex-shrink-0 ${order.status === 'completed' ? 'bg-green-500' : 'bg-gray-700'}`} />
-                  <p className={order.status === 'completed' ? 'text-white' : 'text-gray-600'}>
-                    {order.status === 'completed' ? 'Delivered' : 'Pending delivery'}
-                  </p>
+            <div className="space-y-3 px-5 py-4 text-sm">
+              <div className="flex items-start gap-3">
+                <span className="mt-1.5 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-brand-700" aria-hidden="true" />
+                <div>
+                  <p className="text-ink">Order placed</p>
+                  <p className="text-xs text-muted">{new Date(order.created_at).toLocaleString('en-KE')}</p>
                 </div>
               </div>
+              {payment?.created_at && (
+                <div className="flex items-start gap-3">
+                  <span className={`mt-1.5 h-1.5 w-1.5 flex-shrink-0 rounded-full ${payment.status === 'completed' ? 'bg-success' : 'bg-line-strong'}`} aria-hidden="true" />
+                  <div>
+                    <p className="text-ink">Payment {payment.status}</p>
+                    <p className="text-xs text-muted">{new Date(payment.created_at).toLocaleString('en-KE')}</p>
+                  </div>
+                </div>
+              )}
+              <div className="flex items-start gap-3">
+                <span className={`mt-1.5 h-1.5 w-1.5 flex-shrink-0 rounded-full ${order.status === 'completed' ? 'bg-success' : 'bg-line-strong'}`} aria-hidden="true" />
+                <p className={order.status === 'completed' ? 'text-ink' : 'text-muted'}>
+                  {order.status === 'completed' ? 'Delivered' : 'Pending delivery'}
+                </p>
+              </div>
             </div>
-          </div>
+          </section>
         </div>
       </div>
 
-      {/* Cancel Modal */}
-      <Modal open={cancelModal} onClose={() => setCancelModal(false)} title="Cancel Order" size="sm">
-        <p className="text-gray-400 text-sm mb-4">
-          This will cancel the order and restore stock for all items. The customer will be notified by email.
-        </p>
-        <div className="mb-5">
-          <label className="block text-xs font-semibold text-gray-400 mb-1.5 uppercase tracking-wide">Reason (optional)</label>
+      <Modal
+        open={cancelModal}
+        onClose={() => setCancelModal(false)}
+        title="Cancel this order?"
+        description="Stock will be restored for every item. The customer is notified by email."
+        size="sm"
+      >
+        <div>
+          <label htmlFor="cancel-reason" className="mb-1.5 block text-[13px] font-medium text-ink">
+            Reason <span className="font-normal text-muted">optional</span>
+          </label>
           <textarea
+            id="cancel-reason"
             value={cancelReason}
-            onChange={e => setCancelReason(e.target.value)}
+            onChange={(event) => setCancelReason(event.target.value)}
             rows={3}
-            placeholder="e.g. Customer requested cancellation"
-            className="w-full bg-gray-800 border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-red-500/50 resize-none"
+            placeholder="Customer requested cancellation"
+            className="w-full rounded-md border border-line bg-surface px-3 py-2.5 text-sm text-ink placeholder:text-muted/70 focus:border-brand-700 focus:outline-none focus:ring-2 focus:ring-brand-700/20"
           />
         </div>
-        <div className="flex gap-3 justify-end">
-          <Btn variant="ghost" onClick={() => setCancelModal(false)}>Keep Order</Btn>
-          <Btn variant="danger" onClick={handleCancel} loading={updating}>Cancel Order</Btn>
+
+        <div className="mt-5 flex justify-end gap-3">
+          <Button variant="ghost" onClick={() => setCancelModal(false)}>Keep order</Button>
+          <Button variant="danger" onClick={handleCancel} loading={updating}>Cancel order</Button>
         </div>
       </Modal>
     </div>

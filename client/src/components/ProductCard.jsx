@@ -1,134 +1,124 @@
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { ShoppingCart, Plus, Minus, Tag, BookOpen } from 'lucide-react'
+import { ShoppingCart, Plus, Minus, BookOpen } from 'lucide-react'
 import { useCartStore } from '../context/cartStore'
+import { useToast } from './ui/Toast'
 import { formatKES, badgeColor } from '../utils/format'
 import { productLevel, productSubject } from '../utils/catalogue'
-import { useState } from 'react'
 
 export default function ProductCard({ product }) {
-  const items           = useCartStore((s) => s.items)
-  const addToCart       = useCartStore((s) => s.addToCart)
-  const updateQuantity  = useCartStore((s) => s.updateQuantity)
-  const removeFromCart  = useCartStore((s) => s.removeFromCart)
+  const items = useCartStore((s) => s.items)
+  const addToCart = useCartStore((s) => s.addToCart)
+  const updateQuantity = useCartStore((s) => s.updateQuantity)
+  const removeFromCart = useCartStore((s) => s.removeFromCart)
   const [imgError, setImgError] = useState(false)
+  const { toast } = useToast()
 
-  const cartItem     = items.find((i) => i.id === product.id)
-  const levelLabel   = productLevel(product)
+  const cartItem = items.find((item) => item.id === product.id)
+  const levelLabel = productLevel(product)
   const subjectLabel = productSubject(product)
+  const meta = [levelLabel, subjectLabel || product.subcategory || product.category].filter(Boolean).join(' · ')
+  const productHref = `/product/${product.id}`
 
-  const handleAdd = (e) => {
-    e.preventDefault()
-    e.stopPropagation()
+  const handleAdd = () => {
+    if (product.stock_quantity === 0) return
     addToCart(product)
+    toast({ title: 'Added to cart', description: product.name })
   }
 
-  const handleDec = (e) => {
-    e.preventDefault()
-    e.stopPropagation()
+  const handleDecrease = () => {
     if (cartItem.quantity <= 1) removeFromCart(product.id)
     else updateQuantity(product.id, cartItem.quantity - 1)
   }
 
-  const handleInc = (e) => {
-    e.preventDefault()
-    e.stopPropagation()
+  const handleIncrease = () => {
     updateQuantity(product.id, cartItem.quantity + 1)
   }
 
   const inCart = cartItem && cartItem.quantity > 0
 
   return (
-    <Link
-      to={`/product/${product.id}`}
-      className="group flex flex-col overflow-hidden bg-white rounded-2xl shadow-sm hover:shadow-md hover:-translate-y-1 transition-all duration-300"
-    >
-      {/* Image */}
-      <div className="relative overflow-hidden bg-gray-50 h-48">
+    <div className="group flex flex-col border border-line bg-surface transition-colors duration-150 hover:border-line-strong">
+      <Link to={productHref} className="relative block aspect-[2/3] overflow-hidden bg-muted-surface p-3">
         {product.image_url && !imgError ? (
           <img
             src={product.image_url}
             alt={product.name}
             onError={() => setImgError(true)}
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+            className="h-full w-full object-contain transition-transform duration-300 group-hover:scale-[1.02]"
             loading="lazy"
           />
         ) : (
-          <div className="w-full h-full flex items-center justify-center">
-            <BookOpen className="w-12 h-12 text-gray-200" />
-          </div>
+          <span className="flex h-full w-full items-center justify-center">
+            <BookOpen className="h-10 w-10 text-line-strong" aria-hidden="true" />
+          </span>
         )}
+
         {product.badge && (
-          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold absolute top-3 left-3 shadow-sm ${badgeColor(product.badge)}`}>
+          <span className={`absolute left-2.5 top-2.5 rounded-sm px-1.5 py-0.5 text-[11px] font-semibold ${badgeColor(product.badge)}`}>
             {product.badge}
           </span>
         )}
+
         {product.stock_quantity === 0 && (
-          <div className="absolute inset-0 bg-white/60 flex items-center justify-center">
-            <span className="bg-gray-800 text-white text-xs font-bold px-3 py-1 rounded-full">Out of Stock</span>
-          </div>
-        )}
-      </div>
-
-      {/* Body */}
-      <div className="flex flex-col flex-1 p-4 gap-2">
-        <h3 className="font-bold text-gray-800 text-sm leading-snug group-hover:text-green-600 transition-colors line-clamp-2" style={{fontFamily:'Nunito,sans-serif'}}>
-          {product.name}
-        </h3>
-
-        <div className="flex flex-wrap gap-1">
-          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-gray-100 text-gray-500">
-            <Tag className="w-3 h-3 mr-1" />{product.subcategory || product.category}
+          <span className="absolute inset-0 flex items-center justify-center bg-paper/75">
+            <span className="rounded-sm bg-ink px-2 py-1 text-[11px] font-semibold text-white">Out of stock</span>
           </span>
-          {levelLabel && (
-            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-sky-50 text-sky-600">
-              {levelLabel}
-            </span>
-          )}
-          {subjectLabel && (
-            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-green-50 text-green-600">
-              {subjectLabel}
-            </span>
-          )}
-        </div>
+        )}
+      </Link>
 
-        <div className="mt-auto pt-2 flex items-center justify-between">
-          <span className="font-bold text-green-600 text-base" style={{fontFamily:'Nunito,sans-serif'}}>
+      <div className="flex flex-1 flex-col p-3.5">
+        <h3 className="min-h-[2.5rem] text-sm font-medium leading-snug text-ink">
+          <Link
+            to={productHref}
+            className="line-clamp-2 transition-colors hover:text-brand-800 focus-visible:outline-none focus-visible:underline"
+          >
+            {product.name}
+          </Link>
+        </h3>
+        {meta && <p className="mt-1 truncate text-xs text-muted">{meta}</p>}
+
+        <div className="mt-auto flex items-end justify-between gap-2 pt-3">
+          <span className="text-[15px] font-semibold tabular-nums text-ink">
             {formatKES(product.price)}
           </span>
+
           {inCart ? (
-            <div
-              className="flex items-center gap-1 bg-green-100 rounded-xl p-0.5"
-              onClick={(e) => e.preventDefault()}
-            >
+            <div className="flex items-center rounded-md border border-line-strong">
               <button
-                onClick={handleDec}
-                className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-white transition-colors text-green-700"
+                type="button"
+                onClick={handleDecrease}
+                className="flex h-8 w-8 items-center justify-center text-muted transition-colors hover:bg-muted-surface hover:text-ink"
+                aria-label={`Decrease quantity of ${product.name}`}
               >
-                <Minus className="w-3.5 h-3.5" />
+                <Minus className="h-3.5 w-3.5" />
               </button>
-              <span className="w-8 text-center font-bold text-sm text-green-800" style={{fontFamily:'Nunito,sans-serif'}}>
+              <span className="w-7 text-center text-xs font-semibold tabular-nums text-ink" aria-live="polite">
                 {cartItem.quantity}
               </span>
               <button
-                onClick={handleInc}
-                className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-white transition-colors text-green-700"
+                type="button"
+                onClick={handleIncrease}
+                disabled={product.stock_quantity !== undefined && cartItem.quantity >= product.stock_quantity}
+                className="flex h-8 w-8 items-center justify-center text-muted transition-colors hover:bg-muted-surface hover:text-ink disabled:cursor-not-allowed disabled:opacity-40"
+                aria-label={`Increase quantity of ${product.name}`}
               >
-                <Plus className="w-3.5 h-3.5" />
+                <Plus className="h-3.5 w-3.5" />
               </button>
             </div>
           ) : (
             <button
+              type="button"
               onClick={handleAdd}
               disabled={product.stock_quantity === 0}
-              className="flex items-center gap-1.5 text-xs font-semibold py-2 px-3 rounded-xl transition-all duration-200 active:scale-95 bg-green-600 hover:bg-green-700 text-white shadow-sm disabled:opacity-40 disabled:cursor-not-allowed"
-              style={{fontFamily:'Nunito,sans-serif'}}
+              className="flex h-8 items-center gap-1.5 rounded-md border border-line-strong px-2.5 text-xs font-medium text-ink transition-colors hover:border-brand-700 hover:text-brand-800 disabled:cursor-not-allowed disabled:opacity-40"
             >
-              <ShoppingCart className="w-3.5 h-3.5" />
+              <ShoppingCart className="h-3.5 w-3.5" aria-hidden="true" />
               Add
             </button>
           )}
         </div>
       </div>
-    </Link>
+    </div>
   )
 }

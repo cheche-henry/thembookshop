@@ -1,13 +1,13 @@
-<h2 style="color:#1f7d4f;margin-top:0">Hi <%= @order.customer_name %> 👋</h2>
-<p>Thank you for your order! We've received it and will process it shortly.</p>
+<h2 style="color:#14412b;margin-top:0">Hello <%= @order.customer_name %></h2>
+<p>Thank you for your order. We have received it and will begin processing once payment is confirmed.</p>
 
-<div style="background:#f0faf4;border-radius:8px;padding:16px 20px;margin:20px 0;">
-  <strong>Order Reference:</strong> <code style="background:#d9f2e3;padding:2px 8px;border-radius:4px"><%= @order.reference %></code><br/>
-  <strong>Status:</strong> <span class="badge badge-pending">Pending Payment</span><br/>
+<div style="background:#FAF8F3;border:1px solid #E2DED4;border-radius:4px;padding:16px 20px;margin:20px 0;">
+  <strong>Order reference:</strong> <code style="background:#F3F0E9;padding:2px 8px;border-radius:3px"><%= @order.reference %></code><br/>
+  <strong>Status:</strong> <span class="badge badge-pending">Pending payment</span><br/>
   <strong>Date:</strong> <%= @order.created_at.strftime("%d %B %Y, %H:%M") %>
 </div>
 
-<h3 style="color:#374151">Order Summary</h3>
+<h3 style="color:#161A17">Order summary</h3>
 <table class="items">
   <thead>
     <tr><th>Item</th><th>Qty</th><th>Price</th></tr>
@@ -20,7 +20,7 @@
       <td>KES <%= item.total_price.to_i %></td>
     </tr>
     <% end %>
-    <tr><td colspan="2">Delivery</td><td><%=  @order.delivery_fee.zero? ? "FREE" : "KES #{@order.delivery_fee.to_i}" %></td></tr>
+    <tr><td colspan="2">Delivery</td><td><%= @order.delivery_fee.zero? ? "Free" : "KES #{@order.delivery_fee.to_i}" %></td></tr>
   </tbody>
   <tfoot>
     <tr class="total-row">
@@ -30,12 +30,12 @@
   </tfoot>
 </table>
 
-<h3 style="color:#374151">Delivery Details</h3>
+<h3 style="color:#161A17">Delivery details</h3>
 <p><strong>Name:</strong> <%= @order.customer_name %><br/>
 <strong>Phone:</strong> <%= @order.customer_phone %><br/>
 <strong>Address:</strong> <%= @order.delivery_address %></p>
 
-<p style="margin-top:24px;font-size:13px;color:#6b7280;">
-  You will receive an M-Pesa payment prompt on <strong><%= @order.customer_phone %></strong> shortly.
-  Enter your PIN to complete payment. Questions? Reply to this email or call <strong>+254 700 000 000</strong>.
+<p style="margin-top:24px;font-size:13px;color:#5F665F;">
+  An M-Pesa payment prompt will be sent to <strong><%= @order.customer_phone %></strong>.
+  Enter your PIN on your phone to complete payment. The order is confirmed once payment is received.
 </p>

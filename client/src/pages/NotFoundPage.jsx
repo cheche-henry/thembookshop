@@ -1,20 +1,18 @@
 import { Link } from 'react-router-dom'
-import { BookOpen } from 'lucide-react'
 
 export default function NotFoundPage() {
   return (
-    <div className="min-h-[60vh] flex items-center justify-center px-4">
-      <div className="text-center max-w-sm">
-        <BookOpen className="w-20 h-20 text-gray-200 mx-auto mb-6" />
-        <h1 className="font-bold text-4xl text-gray-800 mb-2">404</h1>
-        <p className="text-gray-500 text-sm mb-2">This page doesn't exist.</p>
-        <p className="text-gray-400 text-xs mb-8">The link you followed may be broken, or the page may have been removed.</p>
-        <Link
-          to="/"
-          className="inline-flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white font-semibold px-6 py-3 rounded-xl transition-colors shadow-sm"
-        >
-          Back to Home
-        </Link>
+    <div className="container-page flex min-h-[60vh] items-center justify-center py-16">
+      <div className="max-w-md text-center">
+        <p className="eyebrow">404</p>
+        <h1 className="mt-3 font-display text-4xl font-semibold text-ink">Page not found</h1>
+        <p className="mt-3 text-sm leading-relaxed text-muted">
+          The link may be broken, or the page may have moved. The shop is a good place to start again.
+        </p>
+        <div className="mt-7 flex flex-col justify-center gap-3 sm:flex-row">
+          <Link to="/shop" className="btn-primary">Browse the shop</Link>
+          <Link to="/" className="btn-secondary">Go home</Link>
+        </div>
       </div>
     </div>
   )

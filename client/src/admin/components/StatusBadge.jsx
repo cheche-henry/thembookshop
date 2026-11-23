@@ -1,18 +1,22 @@
 const config = {
-  pending:           { label: 'Pending',           cls: 'bg-gray-500/20 text-gray-300' },
-  payment_initiated: { label: 'Awaiting Payment',  cls: 'bg-amber-500/20 text-amber-300' },
-  paid:              { label: 'Paid',              cls: 'bg-blue-500/20 text-blue-300' },
-  processing:        { label: 'Processing',        cls: 'bg-purple-500/20 text-purple-300' },
-  completed:         { label: 'Completed',         cls: 'bg-green-500/20 text-green-300' },
-  failed:            { label: 'Failed',            cls: 'bg-red-500/20 text-red-300' },
-  cancelled:         { label: 'Cancelled',         cls: 'bg-gray-600/30 text-gray-400' },
+  pending:           { label: 'Pending',          dot: 'bg-muted',      cls: 'bg-muted-surface text-muted' },
+  payment_initiated: { label: 'Awaiting payment', dot: 'bg-warning',    cls: 'bg-[#fbf3e3] text-warning' },
+  paid:              { label: 'Paid',             dot: 'bg-[#2B5C86]',  cls: 'bg-[#eaf1f5] text-[#2B5C86]' },
+  processing:        { label: 'Processing',       dot: 'bg-accent',     cls: 'bg-accent-soft text-accent' },
+  completed:         { label: 'Completed',        dot: 'bg-success',    cls: 'bg-brand-50 text-brand-800' },
+  failed:            { label: 'Failed',           dot: 'bg-danger',     cls: 'bg-[#fdf3f2] text-danger' },
+  cancelled:         { label: 'Cancelled',        dot: 'bg-muted',      cls: 'bg-muted-surface text-muted' },
 }
 
 export default function StatusBadge({ status, size = 'sm' }) {
-  const c = config[status] || { label: status, cls: 'bg-gray-500/20 text-gray-300' }
+  const item = config[status] || { label: status, dot: 'bg-muted', cls: 'bg-muted-surface text-muted' }
+
   return (
-    <span className={`inline-flex items-center rounded-full font-semibold ${c.cls} ${size === 'sm' ? 'px-2.5 py-0.5 text-xs' : 'px-3 py-1 text-sm'}`}>
-      {c.label}
+    <span className={`inline-flex items-center gap-1.5 rounded-sm font-medium ${item.cls} ${
+      size === 'sm' ? 'px-2 py-0.5 text-[11px]' : 'px-2.5 py-1 text-xs'
+    }`}>
+      <span className={`h-1.5 w-1.5 rounded-full ${item.dot}`} aria-hidden="true" />
+      {item.label}
     </span>
   )
 }

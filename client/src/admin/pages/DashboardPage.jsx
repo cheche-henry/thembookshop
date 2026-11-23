@@ -1,23 +1,25 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import {
-  ShoppingBag, TrendingUp, Package, AlertTriangle,
-  Clock, CheckCircle, XCircle, DollarSign, ArrowRight, RefreshCw
+  AlertTriangle, ArrowRight, CheckCircle, Clock, DollarSign, RefreshCw, ShoppingBag, XCircle,
 } from 'lucide-react'
 import { api } from '../utils/api'
+import { useToast } from '../../components/ui/Toast'
 import StatCard from '../components/StatCard'
 import StatusBadge from '../components/StatusBadge'
 import { Table, Th, Td, Tr } from '../components/AdminTable'
+import { Button } from '../../components/ui/Button'
 
-const fmt = (n) => `KES ${Number(n || 0).toLocaleString('en-KE')}`
+const fmt = (value) => `KES ${Number(value || 0).toLocaleString('en-KE')}`
 
 export default function DashboardPage() {
-  const navigate                  = useNavigate()
-  const [stats, setStats]         = useState(null)
-  const [recentOrders, setRecent] = useState([])
-  const [lowStock, setLowStock]   = useState([])
-  const [loading, setLoading]     = useState(true)
-  const [error, setError]         = useState(null)
+  const navigate = useNavigate()
+  const { toast } = useToast()
+  const [stats, setStats] = useState(null)
+  const [recentOrders, setRecentOrders] = useState([])
+  const [lowStock, setLowStock] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
 
   const load = async () => {
     setLoading(true)
@@ -29,10 +31,11 @@ export default function DashboardPage() {
         api.products.lowStock(),
       ])
       setStats(statsRes.data)
-      setRecent(ordersRes.data || [])
+      setRecentOrders(ordersRes.data || [])
       setLowStock(stockRes.data || [])
-    } catch (e) {
-      setError(e.message)
+    } catch (loadError) {
+      setError(loadError.message)
+      toast({ title: 'Dashboard could not be loaded', description: loadError.message, tone: 'error' })
     } finally {
       setLoading(false)
     }
@@ -40,61 +43,69 @@ export default function DashboardPage() {
 
   useEffect(() => { load() }, [])
 
-  if (error) return (
-    <div className="flex flex-col items-center justify-center h-64 gap-3">
-      <XCircle className="w-10 h-10 text-red-400" />
-      <p className="text-red-400">{error}</p>
-      <button onClick={load} className="text-sm text-gray-400 hover:text-white flex items-center gap-1"><RefreshCw className="w-4 h-4" /> Retry</button>
-    </div>
-  )
+  const today = new Date().toLocaleDateString('en-KE', { weekday: 'long', day: 'numeric', month: 'long' })
+
+  const pipeline = [
+    { label: 'Total', value: stats?.total_orders },
+    { label: 'Paid', value: stats?.paid_orders },
+    { label: 'Processing', value: stats?.processing_orders },
+    { label: 'Completed', value: stats?.completed_orders },
+    { label: 'Failed', value: stats?.failed_orders },
+    { label: 'Cancelled', value: stats?.cancelled_orders },
+  ]
 
   return (
-    <div className="space-y-8">
-      {/* Header */}
-      <div className="flex items-center justify-between">
+    <div className="max-w-6xl space-y-8">
+      <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className="text-white font-bold text-2xl">Dashboard</h1>
-          <p className="text-gray-500 text-sm mt-0.5">Welcome back — here's what's happening today</p>
+          <h1 className="text-2xl font-semibold text-ink">Dashboard</h1>
+          <p className="mt-1 text-sm text-muted">{today}</p>
         </div>
-        <button onClick={load} className="flex items-center gap-2 text-gray-400 hover:text-white text-sm px-3 py-2 rounded-xl hover:bg-white/5 transition-colors">
-          <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} /> Refresh
-        </button>
+        <Button variant="secondary" size="sm" onClick={load} loading={loading}>
+          <RefreshCw className="h-4 w-4" aria-hidden="true" /> Refresh
+        </Button>
       </div>
 
-      {/* Revenue stats */}
-      <div>
-        <h2 className="text-gray-400 text-xs font-semibold uppercase tracking-wider mb-3">Revenue</h2>
-        <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
-          <StatCard label="Revenue Today"      value={fmt(stats?.revenue_today)}       icon={DollarSign}  color="green"  loading={loading} />
-          <StatCard label="Revenue This Month" value={fmt(stats?.revenue_this_month)}  icon={TrendingUp}  color="blue"   loading={loading} />
-          <StatCard label="All-Time Revenue"   value={fmt(stats?.revenue_total)}       icon={TrendingUp}  color="purple" loading={loading} />
+      {error && (
+        <div className="flex items-center gap-3 border border-danger/30 bg-[#fdf3f2] px-4 py-3 text-sm text-danger">
+          <XCircle className="h-4 w-4 flex-shrink-0" aria-hidden="true" />
+          {error}
         </div>
-      </div>
+      )}
 
-      {/* Order stats */}
-      <div>
-        <h2 className="text-gray-400 text-xs font-semibold uppercase tracking-wider mb-3">Orders</h2>
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-          <StatCard label="Total Orders"    value={stats?.total_orders}       icon={ShoppingBag}  color="blue"   loading={loading} />
-          <StatCard label="Orders Today"    value={stats?.orders_today}       icon={Clock}        color="amber"  loading={loading} />
-          <StatCard label="Awaiting Payment" value={stats?.payment_initiated} icon={Clock}        color="amber"  loading={loading} />
-          <StatCard label="Paid"            value={stats?.paid_orders}        icon={CheckCircle}  color="blue"   loading={loading} />
-          <StatCard label="Processing"      value={stats?.processing_orders}  icon={Package}      color="purple" loading={loading} />
-          <StatCard label="Completed"       value={stats?.completed_orders}   icon={CheckCircle}  color="green"  loading={loading} />
-          <StatCard label="Failed"          value={stats?.failed_orders}      icon={XCircle}      color="red"    loading={loading} />
-          <StatCard label="Cancelled"       value={stats?.cancelled_orders}   icon={XCircle}      color="red"    loading={loading} />
+      <section aria-labelledby="revenue-heading">
+        <h2 id="revenue-heading" className="eyebrow mb-3">Revenue</h2>
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+          <StatCard label="Today" value={fmt(stats?.revenue_today)} icon={DollarSign} loading={loading} />
+          <StatCard label="This month" value={fmt(stats?.revenue_this_month)} icon={DollarSign} loading={loading} />
+          <StatCard label="Orders today" value={stats?.orders_today} icon={ShoppingBag} loading={loading} />
+          <StatCard label="Awaiting payment" value={stats?.payment_initiated} icon={Clock} loading={loading} />
         </div>
-      </div>
+      </section>
 
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-        {/* Recent Orders */}
-        <div className="xl:col-span-2">
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-white font-semibold">Recent Orders</h2>
-            <Link to="/admin/orders" className="text-green-400 text-xs hover:text-green-300 flex items-center gap-1">
-              View all <ArrowRight className="w-3 h-3" />
+      <section aria-labelledby="pipeline-heading">
+        <h2 id="pipeline-heading" className="eyebrow mb-3">Order pipeline</h2>
+        <div className="grid grid-cols-2 divide-y divide-line border border-line bg-surface sm:grid-cols-3 sm:divide-y-0 lg:grid-cols-6 lg:divide-x">
+          {pipeline.map((item) => (
+            <div key={item.label} className="px-4 py-3.5">
+              <p className="text-lg font-semibold tabular-nums text-ink">
+                {loading ? <span className="inline-block h-5 w-8 animate-pulse bg-muted-surface" /> : (item.value ?? '—')}
+              </p>
+              <p className="mt-0.5 text-xs text-muted">{item.label}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <div className="grid gap-6 xl:grid-cols-3">
+        <section className="xl:col-span-2" aria-labelledby="recent-orders-heading">
+          <div className="mb-3 flex items-center justify-between">
+            <h2 id="recent-orders-heading" className="text-sm font-semibold text-ink">Recent orders</h2>
+            <Link to="/admin/orders" className="inline-flex items-center gap-1 text-xs text-brand-800 hover:underline">
+              View all <ArrowRight className="h-3 w-3" aria-hidden="true" />
             </Link>
           </div>
+
           <Table>
             <thead>
               <tr>
@@ -106,86 +117,88 @@ export default function DashboardPage() {
             </thead>
             <tbody>
               {loading ? (
-                Array.from({ length: 5 }).map((_, i) => (
-                  <Tr key={i}>
-                    {Array.from({ length: 4 }).map((_, j) => (
-                      <Td key={j}><div className="h-4 bg-white/5 rounded animate-pulse w-20" /></Td>
+                Array.from({ length: 5 }).map((_, row) => (
+                  <Tr key={row}>
+                    {Array.from({ length: 4 }).map((__, cell) => (
+                      <Td key={cell}><div className="h-4 w-20 animate-pulse rounded-sm bg-muted-surface" /></Td>
                     ))}
                   </Tr>
                 ))
               ) : recentOrders.length === 0 ? (
-                <Tr><Td colSpan={4} className="text-center text-gray-600 py-8">No orders yet</Td></Tr>
-              ) : recentOrders.map(order => (
+                <Tr><Td colSpan={4} className="py-10 text-center text-muted">No orders yet.</Td></Tr>
+              ) : recentOrders.map((order) => (
                 <Tr key={order.id} onClick={() => navigate(`/admin/orders/${order.id}`)}>
-                  <Td><span className="font-mono text-xs text-green-400">{order.reference}</span></Td>
+                  <Td><span className="font-mono text-xs text-brand-800">{order.reference}</span></Td>
                   <Td>
-                    <p className="text-white text-sm font-medium">{order.customer_name}</p>
-                    <p className="text-gray-500 text-xs">{order.customer_phone}</p>
+                    <p className="font-medium text-ink">{order.customer_name}</p>
+                    <p className="text-xs text-muted">{order.customer_phone}</p>
                   </Td>
-                  <Td><span className="text-white font-semibold">{fmt(order.total_amount)}</span></Td>
+                  <Td><span className="font-medium tabular-nums text-ink">{fmt(order.total_amount)}</span></Td>
                   <Td><StatusBadge status={order.status} /></Td>
                 </Tr>
               ))}
             </tbody>
           </Table>
-        </div>
+        </section>
 
-        {/* Low Stock Alert */}
-        <div>
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-white font-semibold flex items-center gap-2">
-              <AlertTriangle className="w-4 h-4 text-amber-400" /> Low Stock
+        <section aria-labelledby="stock-heading">
+          <div className="mb-3 flex items-center justify-between">
+            <h2 id="stock-heading" className="flex items-center gap-1.5 text-sm font-semibold text-ink">
+              <AlertTriangle className="h-4 w-4 text-warning" aria-hidden="true" /> Low stock
             </h2>
-            <Link to="/admin/products" className="text-green-400 text-xs hover:text-green-300 flex items-center gap-1">
-              Manage <ArrowRight className="w-3 h-3" />
-            </Link>
+            <Link to="/admin/products" className="text-xs text-brand-800 hover:underline">Manage</Link>
           </div>
-          <div className="bg-gray-900 border border-white/10 rounded-2xl overflow-hidden">
+
+          <div className="border border-line bg-surface">
             {loading ? (
-              <div className="p-4 space-y-3">
-                {Array.from({ length: 4 }).map((_, i) => (
-                  <div key={i} className="flex justify-between items-center">
-                    <div className="h-4 bg-white/5 rounded w-32 animate-pulse" />
-                    <div className="h-5 bg-white/5 rounded w-12 animate-pulse" />
+              <div className="space-y-3 p-4">
+                {Array.from({ length: 4 }).map((_, index) => (
+                  <div key={index} className="flex items-center justify-between">
+                    <div className="h-4 w-32 animate-pulse rounded-sm bg-muted-surface" />
+                    <div className="h-5 w-12 animate-pulse rounded-sm bg-muted-surface" />
                   </div>
                 ))}
               </div>
             ) : lowStock.length === 0 ? (
-              <div className="p-6 text-center">
-                <CheckCircle className="w-8 h-8 text-green-500/40 mx-auto mb-2" />
-                <p className="text-gray-600 text-sm">All products well stocked</p>
+              <div className="px-4 py-8 text-center">
+                <CheckCircle className="mx-auto h-6 w-6 text-success/50" aria-hidden="true" />
+                <p className="mt-2 text-sm text-muted">No products are low on stock.</p>
               </div>
             ) : (
-              <div className="divide-y divide-white/5">
-                {lowStock.map(p => (
-                  <Link key={p.id} to={`/admin/products/${p.id}/edit`} className="flex items-center justify-between px-4 py-3 hover:bg-white/5 transition-colors group">
-                    <div className="min-w-0 flex-1 pr-3">
-                      <p className="text-white text-sm font-medium truncate group-hover:text-green-400 transition-colors">{p.name}</p>
-                      <p className="text-gray-600 text-xs">{p.subcategory || p.category}</p>
-                    </div>
-                    <span className={`text-xs font-bold px-2 py-0.5 rounded-full flex-shrink-0 ${
-                      p.stock_quantity === 0 ? 'bg-red-500/20 text-red-400' : 'bg-amber-500/20 text-amber-400'
-                    }`}>
-                      {p.stock_quantity === 0 ? 'OUT' : `${p.stock_quantity} left`}
-                    </span>
-                  </Link>
+              <ul className="divide-y divide-line">
+                {lowStock.map((product) => (
+                  <li key={product.id}>
+                    <Link
+                      to={`/admin/products/${product.id}/edit`}
+                      className="flex items-center justify-between gap-3 px-4 py-3 transition-colors hover:bg-paper"
+                    >
+                      <div className="min-w-0">
+                        <p className="truncate text-[13px] font-medium text-ink">{product.name}</p>
+                        <p className="text-xs text-muted">{product.subcategory || product.category}</p>
+                      </div>
+                      <span className={`flex-shrink-0 text-[11px] font-medium ${
+                        product.stock_quantity === 0 ? 'text-danger' : 'text-warning'
+                      }`}>
+                        {product.stock_quantity === 0 ? 'Out' : `${product.stock_quantity} left`}
+                      </span>
+                    </Link>
+                  </li>
                 ))}
-              </div>
+              </ul>
             )}
           </div>
 
-          {/* Product summary */}
-          <div className="mt-4 grid grid-cols-2 gap-3">
-            <div className="bg-gray-900 border border-white/10 rounded-xl p-3 text-center">
-              <p className="text-white font-bold text-lg">{stats?.total_products ?? '—'}</p>
-              <p className="text-gray-500 text-xs">Active Products</p>
+          <div className="mt-4 grid grid-cols-2 divide-x divide-line border border-line bg-surface">
+            <div className="px-4 py-3">
+              <p className="text-lg font-semibold tabular-nums text-ink">{stats?.total_products ?? '—'}</p>
+              <p className="text-xs text-muted">Active products</p>
             </div>
-            <div className="bg-gray-900 border border-white/10 rounded-xl p-3 text-center">
-              <p className="text-red-400 font-bold text-lg">{stats?.out_of_stock_products ?? '—'}</p>
-              <p className="text-gray-500 text-xs">Out of Stock</p>
+            <div className="px-4 py-3">
+              <p className="text-lg font-semibold tabular-nums text-danger">{stats?.out_of_stock_products ?? '—'}</p>
+              <p className="text-xs text-muted">Out of stock</p>
             </div>
           </div>
-        </div>
+        </section>
       </div>
     </div>
   )

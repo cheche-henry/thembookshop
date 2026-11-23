@@ -1,107 +1,115 @@
-import { useState, useEffect } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Search, Filter, RefreshCw, ChevronDown } from 'lucide-react'
+import { AlertCircle, RefreshCw, Search } from 'lucide-react'
 import { api } from '../utils/api'
 import { Table, Th, Td, Tr } from '../components/AdminTable'
 import StatusBadge from '../components/StatusBadge'
-import Pagination from '../components/Pagination'
+import Pagination from '../../components/ui/Pagination'
+import { Select } from '../../components/ui/Form'
+import { Button } from '../../components/ui/Button'
 
 const STATUSES = ['', 'pending', 'payment_initiated', 'paid', 'processing', 'completed', 'failed', 'cancelled']
-const fmt = (n) => `KES ${Number(n || 0).toLocaleString('en-KE')}`
+const fmt = (value) => `KES ${Number(value || 0).toLocaleString('en-KE')}`
+const label = (value) => value.replace(/_/g, ' ').replace(/\b\w/g, (letter) => letter.toUpperCase())
 
 export default function OrdersPage() {
-  const [orders, setOrders]   = useState([])
-  const [meta, setMeta]       = useState(null)
+  const [orders, setOrders] = useState([])
+  const [meta, setMeta] = useState(null)
   const [loading, setLoading] = useState(true)
-  const [params, setParams]   = useState({ page: 1, per_page: 20, status: '', q: '' })
-  const navigate              = useNavigate()
+  const [error, setError] = useState(null)
+  const [params, setParams] = useState({ page: 1, per_page: 20, status: '', q: '' })
 
-  const load = async (p = params) => {
+  const navigate = useNavigate()
+  const paramsRef = useRef(params)
+  const debounceRef = useRef(null)
+
+  paramsRef.current = params
+
+  const load = async (current = paramsRef.current) => {
     setLoading(true)
+    setError(null)
     try {
-      const clean = Object.fromEntries(Object.entries(p).filter(([,v]) => v !== ''))
-      const res   = await api.orders.list(clean)
+      const clean = Object.fromEntries(Object.entries(current).filter(([, value]) => value !== ''))
+      const res = await api.orders.list(clean)
       setOrders(res.data || [])
       setMeta(res.meta || null)
-    } catch (e) {
-      console.error(e)
+    } catch (loadError) {
+      setError(loadError.message)
     } finally {
       setLoading(false)
     }
   }
 
-  useEffect(() => { load() }, [])
+  useEffect(() => {
+    load(paramsRef.current)
+    return () => clearTimeout(debounceRef.current)
+  }, [])
 
-  const update = (changes) => {
-    const next = { ...params, ...changes, page: changes.page ?? 1 }
+  const update = (changes, { debounce = false } = {}) => {
+    const next = { ...paramsRef.current, ...changes, page: changes.page ?? 1 }
     setParams(next)
-    load(next)
+    paramsRef.current = next
+    clearTimeout(debounceRef.current)
+    if (debounce) debounceRef.current = setTimeout(() => load(next), 300)
+    else load(next)
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="max-w-6xl space-y-6">
+      <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className="text-white font-bold text-2xl">Orders</h1>
-          <p className="text-gray-500 text-sm mt-0.5">
-            {meta ? `${meta.total_count} total orders` : 'Loading…'}
+          <h1 className="text-2xl font-semibold text-ink">Orders</h1>
+          <p className="mt-1 text-sm text-muted">
+            {meta ? `${meta.total_count} ${meta.total_count === 1 ? 'order' : 'orders'}` : 'Loading orders'}
           </p>
         </div>
-        <button onClick={() => load()} className="flex items-center gap-2 text-gray-400 hover:text-white text-sm px-3 py-2 rounded-xl hover:bg-white/5 transition-colors">
-          <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} /> Refresh
-        </button>
+        <Button variant="secondary" size="sm" onClick={() => load()} loading={loading}>
+          <RefreshCw className="h-4 w-4" aria-hidden="true" /> Refresh
+        </Button>
       </div>
 
-      {/* Filters */}
-      <div className="flex flex-wrap gap-3">
-        <div className="relative flex-1 min-w-48">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-600" />
+      <div className="flex flex-col gap-3 sm:flex-row">
+        <div className="relative flex-1">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" aria-hidden="true" />
           <input
+            type="search"
             value={params.q}
-            onChange={e => update({ q: e.target.value })}
-            placeholder="Search by name, phone, reference…"
-            className="w-full bg-gray-900 border border-white/10 rounded-xl pl-10 pr-4 py-2.5 text-white text-sm placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-green-500/50 transition-all"
+            onChange={(event) => update({ q: event.target.value }, { debounce: true })}
+            placeholder="Search by name, phone or reference"
+            aria-label="Search orders"
+            className="h-11 w-full rounded-md border border-line bg-surface pl-10 pr-3 text-sm text-ink placeholder:text-muted/80 focus:border-brand-700 focus:outline-none focus:ring-2 focus:ring-brand-700/20"
           />
         </div>
-        <div className="relative">
-          <select
+
+        <div className="w-full sm:w-56">
+          <Select
             value={params.status}
-            onChange={e => update({ status: e.target.value })}
-            className="bg-gray-900 border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none focus:ring-2 focus:ring-green-500/50 transition-all appearance-none pr-9"
+            onChange={(event) => update({ status: event.target.value })}
+            aria-label="Filter by status"
           >
-            <option value="">All Statuses</option>
-            {STATUSES.filter(Boolean).map(s => (
-              <option key={s} value={s}>{s.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</option>
+            <option value="">All statuses</option>
+            {STATUSES.filter(Boolean).map((status) => (
+              <option key={status} value={status}>{label(status)}</option>
             ))}
-          </select>
-          <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none" />
+          </Select>
         </div>
       </div>
 
-      {/* Status tabs */}
-      <div className="flex gap-1 overflow-x-auto pb-1">
-        {STATUSES.map(s => (
-          <button
-            key={s || 'all'}
-            onClick={() => update({ status: s })}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-colors ${
-              params.status === s
-                ? 'bg-green-500/20 text-green-400'
-                : 'text-gray-500 hover:text-gray-300 hover:bg-white/5'
-            }`}
-          >
-            {s ? s.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) : 'All'}
-          </button>
-        ))}
-      </div>
+      {error && (
+        <div className="flex flex-wrap items-center justify-between gap-3 border border-danger/30 bg-[#fdf3f2] px-4 py-3 text-sm text-danger" role="alert">
+          <span className="flex items-center gap-2">
+            <AlertCircle className="h-4 w-4 flex-shrink-0" aria-hidden="true" />
+            {error}
+          </span>
+          <Button variant="secondary" size="sm" onClick={() => load()}>Try again</Button>
+        </div>
+      )}
 
-      {/* Table */}
       <Table>
         <thead>
           <tr>
             <Th>Reference</Th>
             <Th>Customer</Th>
-            <Th>Items</Th>
             <Th>Total</Th>
             <Th>Status</Th>
             <Th>Date</Th>
@@ -109,27 +117,30 @@ export default function OrdersPage() {
         </thead>
         <tbody>
           {loading ? (
-            Array.from({ length: 8 }).map((_, i) => (
-              <Tr key={i}>
-                {Array.from({ length: 6 }).map((_, j) => (
-                  <Td key={j}><div className="h-4 bg-white/5 rounded animate-pulse" /></Td>
+            Array.from({ length: 8 }).map((_, row) => (
+              <Tr key={row}>
+                {Array.from({ length: 5 }).map((__, cell) => (
+                  <Td key={cell}><div className="h-4 w-24 animate-pulse rounded-sm bg-muted-surface" /></Td>
                 ))}
               </Tr>
             ))
           ) : orders.length === 0 ? (
-            <Tr><Td colSpan={6} className="text-center text-gray-600 py-12">No orders found</Td></Tr>
-          ) : orders.map(order => (
-            <Tr key={order.id} onClick={() => navigate(`/admin/orders/${order.id}`)}>
-              <Td><span className="font-mono text-xs text-green-400">{order.reference}</span></Td>
-              <Td>
-                <p className="text-white font-medium text-sm">{order.customer_name}</p>
-                <p className="text-gray-500 text-xs">{order.customer_phone}</p>
+            <Tr>
+              <Td colSpan={5} className="py-10 text-center text-muted">
+                No orders match these filters.
               </Td>
-              <Td><span className="text-gray-400 text-xs">—</span></Td>
-              <Td><span className="text-white font-semibold">{fmt(order.total_amount)}</span></Td>
+            </Tr>
+          ) : orders.map((order) => (
+            <Tr key={order.id} onClick={() => navigate(`/admin/orders/${order.id}`)}>
+              <Td><span className="font-mono text-xs text-brand-800">{order.reference}</span></Td>
+              <Td>
+                <p className="font-medium text-ink">{order.customer_name}</p>
+                <p className="text-xs text-muted">{order.customer_phone}</p>
+              </Td>
+              <Td><span className="font-medium tabular-nums text-ink">{fmt(order.total_amount)}</span></Td>
               <Td><StatusBadge status={order.status} /></Td>
               <Td>
-                <span className="text-gray-500 text-xs">
+                <span className="text-xs text-muted">
                   {new Date(order.created_at).toLocaleDateString('en-KE', { day: '2-digit', month: 'short', year: 'numeric' })}
                 </span>
               </Td>
@@ -138,7 +149,7 @@ export default function OrdersPage() {
         </tbody>
       </Table>
 
-      <Pagination meta={meta} onPageChange={page => update({ page })} />
+      <Pagination meta={meta} onPageChange={(page) => update({ page })} />
     </div>
   )
 }

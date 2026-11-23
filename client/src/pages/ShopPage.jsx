@@ -1,17 +1,18 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { Search, SlidersHorizontal, X, AlertCircle } from 'lucide-react'
+import { AlertCircle, Search, SlidersHorizontal, X } from 'lucide-react'
 import { useFilters } from '../hooks/useFilters'
 import FilterSidebar from '../components/FilterSidebar'
 import ProductCard from '../components/ProductCard'
 import { SkeletonGrid } from '../components/SkeletonCard'
 import { EmptySearch } from '../components/EmptyState'
+import Pagination from '../components/ui/Pagination'
+import { Button } from '../components/ui/Button'
 
 export default function ShopPage() {
-  const [searchParams]         = useSearchParams()
+  const [searchParams] = useSearchParams()
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false)
 
-  // Read initial values from URL params
   const initial = {
     search:      searchParams.get('search') || '',
     category:    searchParams.get('category') || 'all',
@@ -20,6 +21,7 @@ export default function ShopPage() {
     classLevel:  searchParams.get('class_level') || 'all',
     subject:     searchParams.get('subject') || 'all',
     subsubject:  searchParams.get('subsubject') || 'all',
+    page:        Math.max(1, Number(searchParams.get('page')) || 1),
   }
 
   const {
@@ -32,71 +34,79 @@ export default function ShopPage() {
     subsubject, setSubsubject,
     products, loading, error,
     meta, facets, page, setPage,
-    reset, hasFilters,
+    reset, refetch, hasFilters,
   } = useFilters(initial)
 
+  const resultCount = meta?.total_count ?? products.length
+  const resultLabel = loading
+    ? 'Loading products'
+    : `${resultCount} ${resultCount === 1 ? 'product' : 'products'}`
+
   return (
-    <div className="page-enter max-w-7xl mx-auto px-4 sm:px-6 py-8">
-      {/* Header */}
-      <div className="mb-6">
-        <h1 className="section-title mb-1">Our Products</h1>
-        <p className="text-gray-500 text-sm">
-          {loading
-            ? 'Loading…'
-            : meta
-              ? `${meta.total_count} product${meta.total_count !== 1 ? 's' : ''} found`
-              : `${products.length} product${products.length !== 1 ? 's' : ''} found`
-          }
-        </p>
+    <div className="container-page py-8 sm:py-10">
+      <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <p className="eyebrow">Catalogue</p>
+          <h1 className="mt-2 text-3xl font-semibold sm:text-[34px]">Shop</h1>
+        </div>
+        <p className="text-sm text-muted" aria-live="polite">{resultLabel}</p>
       </div>
 
-      {/* Search bar + mobile filter button */}
-      <div className="flex gap-3 mb-6">
+      <div className="flex flex-col gap-3 sm:flex-row">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
+          <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" aria-hidden="true" />
           <input
+            type="search"
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search products, subjects, class levels…"
-            className="input pl-10 text-sm"
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder="Search titles, subjects and class levels"
+            aria-label="Search products"
+            className="h-11 w-full rounded-md border border-line bg-surface pl-10 pr-10 text-sm text-ink placeholder:text-muted/80 focus:border-brand-700 focus:outline-none focus:ring-2 focus:ring-brand-700/20"
           />
           {search && (
             <button
+              type="button"
               onClick={() => setSearch('')}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+              className="absolute right-2.5 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded text-muted hover:bg-muted-surface hover:text-ink"
+              aria-label="Clear search"
             >
-              <X className="w-4 h-4" />
+              <X className="h-4 w-4" />
             </button>
           )}
         </div>
+
         <button
+          type="button"
           onClick={() => setMobileFiltersOpen(true)}
-          className="lg:hidden flex items-center gap-2 btn-secondary text-sm py-2 px-4"
+          className="flex h-11 items-center justify-center gap-2 rounded-md border border-line-strong bg-surface px-4 text-sm font-medium text-ink lg:hidden"
+          aria-haspopup="dialog"
         >
-          <SlidersHorizontal className="w-4 h-4" />
+          <SlidersHorizontal className="h-4 w-4" aria-hidden="true" />
           Filters
-          {hasFilters && <span className="w-2 h-2 bg-brand-500 rounded-full" />}
+          {hasFilters && <span className="h-1.5 w-1.5 rounded-full bg-brand-700" aria-label="Filters applied" />}
         </button>
       </div>
 
-      {/* Active filter chips */}
       {hasFilters && (
-        <div className="flex flex-wrap gap-2 mb-4">
+        <div className="mt-4 flex flex-wrap items-center gap-2">
           {category !== 'all' && <Chip label={category} onRemove={() => setCategory('all')} />}
           {subcategory !== 'all' && <Chip label={subcategory} onRemove={() => setSubcategory('all')} />}
           {stage !== 'all' && <Chip label={stage} onRemove={() => setStage('all')} />}
           {classLevel !== 'all' && <Chip label={classLevel} onRemove={() => setClassLevel('all')} />}
           {subject !== 'all' && <Chip label={subject} onRemove={() => setSubject('all')} />}
           {subsubject !== 'all' && <Chip label={subsubject} onRemove={() => setSubsubject('all')} />}
-          {search && <Chip label={`"${search}"`} onRemove={() => setSearch('')} />}
-          <button onClick={reset} className="text-xs text-gray-400 hover:text-red-500 underline font-display">
+          {search && <Chip label={`“${search}”`} onRemove={() => setSearch('')} />}
+          <button
+            type="button"
+            onClick={reset}
+            className="ml-1 text-xs font-medium text-muted underline-offset-4 hover:text-ink hover:underline"
+          >
             Clear all
           </button>
         </div>
       )}
 
-      <div className="flex gap-8">
-        {/* Sidebar */}
+      <div className="mt-8 flex gap-10">
         <FilterSidebar
           category={category} setCategory={setCategory}
           subcategory={subcategory} setSubcategory={setSubcategory}
@@ -110,13 +120,14 @@ export default function ShopPage() {
           setMobileOpen={setMobileFiltersOpen}
         />
 
-        {/* Product grid */}
-        <div className="flex-1 min-w-0">
-          {/* API error */}
+        <div className="min-w-0 flex-1">
           {error && (
-            <div className="flex items-center gap-3 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl mb-6 text-sm">
-              <AlertCircle className="w-4 h-4 flex-shrink-0" />
-              {error}
+            <div className="mb-6 flex flex-wrap items-center justify-between gap-3 border border-danger/30 bg-[#fdf3f2] px-4 py-3 text-sm text-danger">
+              <span className="flex items-center gap-2">
+                <AlertCircle className="h-4 w-4 flex-shrink-0" aria-hidden="true" />
+                {error}
+              </span>
+              <Button variant="secondary" size="sm" onClick={refetch}>Try again</Button>
             </div>
           )}
 
@@ -126,48 +137,13 @@ export default function ShopPage() {
             <EmptySearch onReset={reset} />
           ) : (
             <>
-              <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
-                {products.map((p) => (
-                  <ProductCard key={p.id} product={p} />
+              <div className="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-4">
+                {products.map((product) => (
+                  <ProductCard key={product.id} product={product} />
                 ))}
               </div>
 
-              {/* Pagination */}
-              {meta && meta.total_pages > 1 && (
-                <div className="flex flex-wrap justify-center items-center gap-2 mt-8">
-                  <button
-                    onClick={() => setPage(Math.max(1, page - 1))}
-                    disabled={page <= 1}
-                    className="px-3 h-9 rounded-xl text-sm font-semibold text-gray-500 hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
-                  >
-                    Prev
-                  </button>
-                  {pageWindow(page, meta.total_pages).map((p, i) =>
-                    p === '…' ? (
-                      <span key={`gap-${i}`} className="w-6 text-center text-gray-400 text-sm">…</span>
-                    ) : (
-                      <button
-                        key={p}
-                        onClick={() => setPage(p)}
-                        className={`w-9 h-9 rounded-xl text-sm font-semibold transition-all ${
-                          p === page
-                            ? 'bg-brand-500 text-white shadow-sm'
-                            : 'text-gray-500 hover:bg-gray-100'
-                        }`}
-                      >
-                        {p}
-                      </button>
-                    )
-                  )}
-                  <button
-                    onClick={() => setPage(Math.min(meta.total_pages, page + 1))}
-                    disabled={page >= meta.total_pages}
-                    className="px-3 h-9 rounded-xl text-sm font-semibold text-gray-500 hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
-                  >
-                    Next
-                  </button>
-                </div>
-              )}
+              <Pagination meta={meta} onPageChange={setPage} />
             </>
           )}
         </div>
@@ -176,27 +152,17 @@ export default function ShopPage() {
   )
 }
 
-// Compact pagination: 1 … 4 5 6 … 20
-function pageWindow(current, total) {
-  if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1)
-
-  const pages = new Set([1, total, current, current - 1, current + 1])
-  const list = [...pages].filter(p => p >= 1 && p <= total).sort((a, b) => a - b)
-
-  const result = []
-  list.forEach((p, i) => {
-    if (i > 0 && p - list[i - 1] > 1) result.push('…')
-    result.push(p)
-  })
-  return result
-}
-
 function Chip({ label, onRemove }) {
   return (
-    <span className="inline-flex items-center gap-1.5 bg-brand-100 text-brand-700 text-xs font-display font-semibold px-3 py-1.5 rounded-full">
+    <span className="inline-flex items-center gap-1.5 rounded-sm border border-line bg-surface px-2 py-1 text-xs text-body">
       {label}
-      <button onClick={onRemove} className="hover:text-brand-900 transition-colors">
-        <X className="w-3 h-3" />
+      <button
+        type="button"
+        onClick={onRemove}
+        className="rounded p-0.5 text-muted transition-colors hover:bg-muted-surface hover:text-ink"
+        aria-label={`Remove ${label} filter`}
+      >
+        <X className="h-3 w-3" />
       </button>
     </span>
   )

@@ -10,7 +10,7 @@
 # ============================================================
 require_relative "seeds/catalogue"
 
-puts "🌱 Seeding Them Bookshop..."
+puts "Seeding Them Bookshop..."
 
 # ── Admin ─────────────────────────────────────────────────────────────────────
 admin_password = ENV["ADMIN_PASSWORD"].presence
@@ -27,7 +27,7 @@ admin.assign_attributes(
   active: true
 )
 admin.save!
-puts "✅ Admin: #{admin.email}"
+puts "Admin: #{admin.email}"
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 SKIP_NAMES = ["GRANT IN AID", "AIRTEL", "SAFARICOM", "CASHSALE", "PETTY CASH", "RAFFLE"].freeze
@@ -115,7 +115,7 @@ entries.each_with_index do |entry, index|
   else
     skipped += 1
     failures << "#{raw_name}: #{product.errors.full_messages.join(", ")}"
-    puts "\n❌ #{raw_name}: #{product.errors.full_messages.join(", ")}"
+    puts "\nFAILED #{raw_name}: #{product.errors.full_messages.join(", ")}"
   end
 
   flags = ProductNameNormalizer.review_flags(raw_name)
@@ -138,9 +138,9 @@ Product.where(subcategory: nil).find_each do |product|
 end
 
 # ── Audit ─────────────────────────────────────────────────────────────────────
-puts "\n\n✅ #{created} created, #{updated} updated, #{skipped} skipped"
-puts "🧹 Legacy rows: #{deleted} deleted, #{deactivated} deactivated (had orders)"
-puts "📦 Total active products: #{Product.active.count}"
+puts "\n\n#{created} created, #{updated} updated, #{skipped} skipped"
+puts "Legacy rows: #{deleted} deleted, #{deactivated} deactivated (had orders)"
+puts "Total active products: #{Product.active.count}"
 
 puts "\nCatalogue by department:"
 Product::TAXONOMY.each do |category, subcategories|
@@ -180,26 +180,26 @@ end
 
 duplicate_names = Product.active.group(:name).having("COUNT(*) > 1").count
 if duplicate_names.any?
-  puts "\n⚠️  Duplicate display names (kept as separate stock rows):"
+  puts "\nWarning: duplicate display names (kept as separate stock rows):"
   duplicate_names.each_key do |name|
     raws = Product.active.where(name: name).order(:source_key).pluck(:raw_name)
     puts "  #{name}: #{raws.join(" / ")}"
   end
 end
 
-puts "\n⚠️  Duplicate source keys (skipped): #{duplicate_keys.uniq.join(", ")}" if duplicate_keys.any?
+puts "\nWarning: duplicate source keys (skipped): #{duplicate_keys.uniq.join(", ")}" if duplicate_keys.any?
 
 if review.any?
-  puts "\n⚠️  Flagged for manual review:"
+  puts "\nFlagged for manual review:"
   review.each { |raw, display, flags| puts "  #{raw} → #{display} (#{flags.join(", ")})" }
 end
 
 if failures.any?
-  puts "\n❌ #{failures.length} row(s) failed validation:"
+  puts "\n#{failures.length} row(s) failed validation:"
   failures.each { |failure| puts "  #{failure}" }
 end
 
-puts "\n🎉 Them Bookshop seeded!"
-puts "\n📋 Admin:"
+puts "\nThem Bookshop seeded."
+puts "\nAdmin:"
 puts "   Email:    #{admin.email}"
 puts "   Password: configured via ADMIN_PASSWORD in api/.env"

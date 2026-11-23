@@ -3,20 +3,115 @@
 @tailwind utilities;
 
 @layer base {
-  body { font-family: 'DM Sans', sans-serif; }
-  h1,h2,h3,h4,h5,h6 { font-family: 'Nunito', sans-serif; }
+  html {
+    -webkit-text-size-adjust: 100%;
+    scroll-padding-top: 6rem;
+  }
+
+  body {
+    @apply bg-paper font-sans text-body antialiased;
+  }
+
+  h1, h2, h3, h4 {
+    @apply font-display text-ink;
+    font-optical-sizing: auto;
+  }
+
+  ::selection {
+    background: #d9f2e3;
+    color: #14412b;
+  }
+
+  :focus-visible {
+    outline: 2px solid #1a6340;
+    outline-offset: 2px;
+  }
+
+  input, select, textarea, button {
+    font: inherit;
+  }
 }
+
 @layer components {
-  .btn-primary { @apply bg-brand-500 hover:bg-brand-600 text-white font-semibold py-2.5 px-5 rounded-xl transition-all duration-200 shadow-sm hover:shadow-md active:scale-95 font-display; }
-  .btn-secondary { @apply bg-white hover:bg-brand-50 text-brand-600 border border-brand-300 font-semibold py-2.5 px-5 rounded-xl transition-all duration-200 font-display; }
-  .btn-outline { @apply border-2 border-brand-500 text-brand-600 hover:bg-brand-500 hover:text-white font-semibold py-2.5 px-5 rounded-xl transition-all duration-200 font-display; }
-  .card { @apply bg-white rounded-xl2 shadow-card hover:shadow-card-hover transition-all duration-300; }
-  .section-title { @apply font-display text-2xl md:text-3xl font-bold text-gray-800; }
-  .badge { @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold font-display; }
-  .input { @apply w-full border border-gray-200 rounded-xl px-4 py-2.5 text-gray-800 focus:outline-none focus:ring-2 focus:ring-brand-400 focus:border-transparent transition-all; }
+  .container-page {
+    @apply mx-auto w-full max-w-content px-5 sm:px-8;
+  }
+
+  .eyebrow {
+    @apply text-[11px] font-semibold uppercase tracking-[0.08em] text-muted;
+  }
+
+  .input {
+    @apply h-11 w-full rounded-md border border-line bg-surface px-3 text-sm text-ink placeholder:text-muted/70 focus:border-brand-700 focus:outline-none focus:ring-2 focus:ring-brand-700/20;
+  }
+
+  /* Kept for the few legacy call sites; new work uses components/ui. */
+  .btn-primary {
+    @apply inline-flex h-10 items-center justify-center gap-2 rounded-md bg-brand-700 px-4 text-sm font-medium text-white transition-colors hover:bg-brand-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-700/40 focus-visible:ring-offset-2 disabled:opacity-50;
+  }
+  .btn-secondary {
+    @apply inline-flex h-10 items-center justify-center gap-2 rounded-md border border-line-strong bg-surface px-4 text-sm font-medium text-ink transition-colors hover:border-brand-700 hover:text-brand-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-700/40 focus-visible:ring-offset-2 disabled:opacity-50;
+  }
+  .section-title {
+    @apply font-display text-2xl font-semibold text-ink sm:text-3xl;
+  }
+  .badge {
+    @apply inline-flex items-center gap-1 rounded-sm px-1.5 py-0.5 text-[11px] font-semibold;
+  }
 }
-@keyframes shimmer { 0%{background-position:-200% 0} 100%{background-position:200% 0} }
-.skeleton { background:linear-gradient(90deg,#f0f0f0 25%,#e8e8e8 50%,#f0f0f0 75%); background-size:200% 100%; animation:shimmer 1.5s infinite; }
-.page-enter { animation:fadeUp 0.3s ease both; }
-@keyframes fadeUp { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
-::-webkit-scrollbar{width:6px} ::-webkit-scrollbar-track{background:#f1f1f1} ::-webkit-scrollbar-thumb{background:#c0d9c8;border-radius:4px} ::-webkit-scrollbar-thumb:hover{background:#2a9d64}
+
+.skeleton {
+  background: linear-gradient(90deg, #ede9e0 25%, #e4e0d6 50%, #ede9e0 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.6s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+.page-enter {
+  animation: pageIn 160ms ease-out both;
+}
+
+@keyframes pageIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.skip-link {
+  position: absolute;
+  left: 1rem;
+  top: -3rem;
+  z-index: 100;
+  border-radius: 6px;
+  background: #14412b;
+  color: #fff;
+  padding: 0.625rem 1rem;
+  font-size: 0.875rem;
+  transition: top 150ms ease;
+}
+.skip-link:focus {
+  top: 1rem;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #cfc9bc transparent;
+}
+
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #cfc9bc; border-radius: 8px; }
+::-webkit-scrollbar-thumb:hover { background: #b3aa99; }
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

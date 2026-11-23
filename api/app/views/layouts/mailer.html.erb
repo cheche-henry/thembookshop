@@ -4,36 +4,40 @@
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <style>
-      body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size: 15px; color: #333; background: #f5f5f5; margin: 0; padding: 0; }
-      .wrapper { max-width: 600px; margin: 30px auto; background: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 12px rgba(0,0,0,0.08); }
-      .header { background: linear-gradient(135deg, #2a9d64, #1f7d4f); padding: 28px 32px; color: white; }
-      .header h1 { margin: 0; font-size: 22px; font-weight: 800; }
-      .header p { margin: 4px 0 0; opacity: 0.85; font-size: 13px; }
+      body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size: 15px; line-height: 1.55; color: #2C322D; background: #F3F0E9; margin: 0; padding: 0; }
+      .wrapper { max-width: 600px; margin: 32px auto; background: #ffffff; border: 1px solid #E2DED4; border-radius: 6px; overflow: hidden; }
+      .header { background: #14412b; padding: 24px 32px; color: #ffffff; }
+      .header h1 { margin: 0; font-size: 20px; font-weight: 700; letter-spacing: -0.01em; }
+      .header p { margin: 4px 0 0; color: rgba(255,255,255,0.65); font-size: 13px; }
       .body { padding: 32px; }
-      .footer { background: #f9f9f9; border-top: 1px solid #eee; padding: 20px 32px; font-size: 12px; color: #888; text-align: center; }
-      .btn { display: inline-block; background: #2a9d64; color: white !important; text-decoration: none; padding: 12px 28px; border-radius: 8px; font-weight: 700; font-size: 15px; margin-top: 16px; }
-      .badge { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 12px; font-weight: 700; }
-      .badge-pending   { background: #fef3c7; color: #92400e; }
-      .badge-paid      { background: #d1fae5; color: #065f46; }
-      .badge-completed { background: #dbeafe; color: #1e40af; }
+      h2 { font-size: 20px; }
+      h3 { font-size: 15px; margin-top: 24px; }
+      .footer { background: #FAF8F3; border-top: 1px solid #E2DED4; padding: 18px 32px; font-size: 12px; color: #5F665F; }
+      .btn { display: inline-block; background: #1f7d4f; color: #ffffff !important; text-decoration: none; padding: 11px 24px; border-radius: 4px; font-weight: 600; font-size: 14px; margin-top: 16px; }
+      .badge { display: inline-block; padding: 2px 8px; border-radius: 3px; font-size: 12px; font-weight: 600; }
+      .badge-pending   { background: #FBF3E3; color: #8A5A00; }
+      .badge-paid      { background: #EAF1F5; color: #2B5C86; }
+      .badge-completed { background: #d9f2e3; color: #14412b; }
+      .badge-processing { background: #F6E9E1; color: #A9552F; }
+      .badge-failed    { background: #fdf3f2; color: #A32A22; }
+      .badge-cancelled { background: #F3F0E9; color: #5F665F; }
       table.items { width: 100%; border-collapse: collapse; margin-top: 16px; }
-      table.items th { text-align: left; padding: 8px 12px; background: #f3f4f6; font-size: 12px; color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px; }
-      table.items td { padding: 10px 12px; border-bottom: 1px solid #f3f4f6; font-size: 14px; }
-      .total-row td { font-weight: 700; font-size: 16px; border-top: 2px solid #e5e7eb; border-bottom: none; }
+      table.items th { text-align: left; padding: 8px 12px; background: #FAF8F3; border-bottom: 1px solid #E2DED4; font-size: 11px; color: #5F665F; text-transform: uppercase; letter-spacing: 0.06em; }
+      table.items td { padding: 10px 12px; border-bottom: 1px solid #E2DED4; font-size: 14px; }
+      .total-row td { font-weight: 700; font-size: 15px; border-top: 2px solid #CFC9BC; border-bottom: none; }
     </style>
   </head>
   <body>
     <div class="wrapper">
       <div class="header">
-        <h1>📚 Them Bookshop</h1>
-        <p>All Your School Needs in One Place · Kenya 🇰🇪</p>
+        <h1>Them Bookshop</h1>
+        <p>School books and supplies, Kenya</p>
       </div>
       <div class="body">
         <%= yield %>
       </div>
       <div class="footer">
-        <p>Them Bookshop · Nairobi, Kenya · hello@thembookshop.co.ke · +254 700 000 000</p>
-        <p>We accept M-Pesa · Delivery Countrywide</p>
+        <p style="margin:0">This message was sent by Them Bookshop about an order placed on our website.</p>
       </div>
     </div>
   </body>

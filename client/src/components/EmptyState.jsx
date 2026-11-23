@@ -1,22 +1,40 @@
-import { PackageSearch, ShoppingCart } from 'lucide-react'
 import { Link } from 'react-router-dom'
-export function EmptySearch({ onReset }) {
+import { PackageSearch, ShoppingCart } from 'lucide-react'
+import { Button } from './ui/Button'
+
+export function EmptyState({ icon: Icon, title, description, action, className = '' }) {
   return (
-    <div className="flex flex-col items-center justify-center py-20 text-center">
-      <PackageSearch className="w-16 h-16 text-gray-200 mb-4"/>
-      <h3 className="font-bold text-xl text-gray-700 mb-2" style={{fontFamily:'Nunito,sans-serif'}}>No products found</h3>
-      <p className="text-gray-400 text-sm mb-6 max-w-xs">We couldn't find any products matching your filters. Try adjusting your search or clear filters.</p>
-      <button onClick={onReset} className="bg-green-600 hover:bg-green-700 text-white font-semibold py-2.5 px-5 rounded-xl transition-all">Clear Filters</button>
+    <div className={`flex flex-col items-start border border-dashed border-line-strong bg-surface px-6 py-12 sm:items-center sm:px-10 sm:py-16 sm:text-center ${className}`}>
+      {Icon && (
+        <div className="mb-5 flex h-11 w-11 items-center justify-center rounded-md border border-line bg-muted-surface">
+          <Icon className="h-5 w-5 text-muted" aria-hidden="true" />
+        </div>
+      )}
+      <h3 className="text-lg font-semibold text-ink">{title}</h3>
+      {description && <p className="mt-2 max-w-sm text-sm leading-relaxed text-muted">{description}</p>}
+      {action && <div className="mt-6">{action}</div>}
     </div>
   )
 }
+
+export function EmptySearch({ onReset }) {
+  return (
+    <EmptyState
+      icon={PackageSearch}
+      title="No products match these filters"
+      description="Try a different search term, or clear a filter to widen the results."
+      action={<Button variant="secondary" onClick={onReset}>Clear filters</Button>}
+    />
+  )
+}
+
 export function EmptyCart() {
   return (
-    <div className="flex flex-col items-center justify-center py-24 text-center">
-      <ShoppingCart className="w-16 h-16 text-gray-200 mb-4"/>
-      <h3 className="font-bold text-xl text-gray-700 mb-2" style={{fontFamily:'Nunito,sans-serif'}}>Your cart is empty</h3>
-      <p className="text-gray-400 text-sm mb-6 max-w-xs">You haven't added anything yet. Head to the shop to find books and stationery!</p>
-      <Link to="/shop" className="bg-green-600 hover:bg-green-700 text-white font-semibold py-2.5 px-5 rounded-xl transition-all">Browse the Shop</Link>
-    </div>
+    <EmptyState
+      icon={ShoppingCart}
+      title="Your cart is empty"
+      description="Browse the shop to find textbooks, readers and stationery for the school year."
+      action={<Link to="/shop" className="btn-secondary">Browse the shop</Link>}
+    />
   )
 }

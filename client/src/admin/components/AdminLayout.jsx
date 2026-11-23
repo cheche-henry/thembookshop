@@ -1,19 +1,25 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import {
-  LayoutDashboard, Package, ShoppingBag, LogOut, Menu, X,
-  BookOpen, ChevronRight, Bell, Settings, User
+  LayoutDashboard, Package, ShoppingBag, LogOut, Menu, X, BookOpen, Settings, User, ExternalLink,
 } from 'lucide-react'
 import { useAuthStore } from '../context/authStore'
 
 const navItems = [
-  { to: '/admin',          label: 'Dashboard',  icon: LayoutDashboard, exact: true },
-  { to: '/admin/orders',   label: 'Orders',     icon: ShoppingBag },
-  { to: '/admin/products', label: 'Products',   icon: Package },
-  { to: '/admin/settings', label: 'Settings',   icon: Settings },
+  { to: '/admin',          label: 'Dashboard', icon: LayoutDashboard, exact: true },
+  { to: '/admin/orders',   label: 'Orders',    icon: ShoppingBag },
+  { to: '/admin/products', label: 'Products',  icon: Package },
+  { to: '/admin/settings', label: 'Settings',  icon: Settings },
 ]
 
-function NavItem({ item, collapsed, onClick }) {
+const sectionTitles = {
+  '/admin': 'Dashboard',
+  '/admin/orders': 'Orders',
+  '/admin/products': 'Products',
+  '/admin/settings': 'Settings',
+}
+
+function NavItem({ item, onClick }) {
   const location = useLocation()
   const active = item.exact
     ? location.pathname === item.to
@@ -23,15 +29,15 @@ function NavItem({ item, collapsed, onClick }) {
     <Link
       to={item.to}
       onClick={onClick}
-      className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-150 group ${
+      aria-current={active ? 'page' : undefined}
+      className={`flex items-center gap-3 rounded-md px-3 py-2 text-[13px] transition-colors ${
         active
-          ? 'bg-green-500/20 text-green-400 font-semibold'
-          : 'text-gray-400 hover:text-white hover:bg-white/5'
+          ? 'bg-white/10 font-medium text-white'
+          : 'text-white/55 hover:bg-white/5 hover:text-white'
       }`}
     >
-      <item.icon className={`w-5 h-5 flex-shrink-0 ${active ? 'text-green-400' : 'text-gray-500 group-hover:text-gray-300'}`} />
-      {!collapsed && <span className="text-sm">{item.label}</span>}
-      {active && !collapsed && <ChevronRight className="w-3.5 h-3.5 ml-auto text-green-500" />}
+      <item.icon className={`h-4 w-4 flex-shrink-0 ${active ? 'text-brand-300' : 'text-white/40'}`} aria-hidden="true" />
+      <span>{item.label}</span>
     </Link>
   )
 }
@@ -40,97 +46,109 @@ export default function AdminLayout({ children }) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const { admin, logout } = useAuthStore()
   const navigate = useNavigate()
+  const location = useLocation()
+
+  useEffect(() => { setSidebarOpen(false) }, [location.pathname])
 
   const handleLogout = () => {
     logout()
     navigate('/admin/login')
   }
 
-  const Sidebar = ({ mobile = false }) => (
-    <div className={`flex flex-col h-full ${mobile ? '' : ''}`}>
-      {/* Logo */}
-      <div className="flex items-center gap-3 px-4 py-5 border-b border-white/10">
-        <div className="w-9 h-9 bg-green-500 rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg shadow-green-500/25">
-          <BookOpen className="w-5 h-5 text-white" />
-        </div>
+  const currentTitle = sectionTitles[location.pathname]
+    || (location.pathname.startsWith('/admin/orders') ? 'Orders' : 'Products')
+
+  const Sidebar = ({ onNavigate }) => (
+    <div className="flex h-full flex-col">
+      <div className="flex items-center gap-3 border-b border-white/10 px-4 py-5">
+        <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-md bg-brand-600">
+          <BookOpen className="h-[18px] w-[18px] text-white" aria-hidden="true" />
+        </span>
         <div className="min-w-0">
-          <p className="text-white font-bold text-sm leading-none">Them Bookshop</p>
-          <p className="text-green-400 text-xs mt-0.5">Admin Panel</p>
+          <p className="font-display text-sm font-semibold leading-none text-white">Them Bookshop</p>
+          <p className="mt-1 text-[11px] text-white/40">Admin</p>
         </div>
       </div>
 
-      {/* Nav */}
-      <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
-        {navItems.map(item => (
-          <NavItem key={item.to} item={item} onClick={() => setSidebarOpen(false)} />
-        ))}
+      <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-4" aria-label="Admin">
+        {navItems.map((item) => <NavItem key={item.to} item={item} onClick={onNavigate} />)}
       </nav>
 
-      {/* Admin info + logout */}
-      <div className="px-3 py-4 border-t border-white/10">
-        <div className="flex items-center gap-3 px-3 py-2 rounded-xl bg-white/5 mb-2">
-          <div className="w-8 h-8 bg-green-500/20 rounded-lg flex items-center justify-center flex-shrink-0">
-            <User className="w-4 h-4 text-green-400" />
-          </div>
-          <div className="min-w-0 flex-1">
-            <p className="text-white text-xs font-semibold truncate">{admin?.name || 'Admin'}</p>
-            <p className="text-gray-500 text-xs truncate">{admin?.email}</p>
+      <div className="border-t border-white/10 p-3">
+        <div className="mb-2 flex items-center gap-2.5 rounded-md bg-white/5 px-3 py-2">
+          <span className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded bg-white/10">
+            <User className="h-3.5 w-3.5 text-white/60" aria-hidden="true" />
+          </span>
+          <div className="min-w-0">
+            <p className="truncate text-xs font-medium text-white">{admin?.name || 'Admin'}</p>
+            <p className="truncate text-[11px] text-white/40">{admin?.email}</p>
           </div>
         </div>
         <button
+          type="button"
           onClick={handleLogout}
-          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-gray-400 hover:text-red-400 hover:bg-red-400/10 transition-all text-sm"
+          className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-[13px] text-white/55 transition-colors hover:bg-red-500/10 hover:text-red-300"
         >
-          <LogOut className="w-4 h-4" />
-          Sign Out
+          <LogOut className="h-4 w-4" aria-hidden="true" />
+          Sign out
         </button>
       </div>
     </div>
   )
 
   return (
-    <div className="flex h-screen bg-gray-950 overflow-hidden">
-      {/* Desktop sidebar */}
-      <aside className="hidden lg:flex flex-col w-60 bg-gray-900 border-r border-white/10 flex-shrink-0">
+    <div className="flex h-screen overflow-hidden bg-paper">
+      <a href="#admin-main" className="skip-link">Skip to content</a>
+
+      <aside className="hidden w-60 flex-shrink-0 border-r border-white/10 bg-[#16201B] lg:flex lg:flex-col">
         <Sidebar />
       </aside>
 
-      {/* Mobile sidebar overlay */}
       {sidebarOpen && (
-        <div className="lg:hidden fixed inset-0 z-50 flex">
-          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setSidebarOpen(false)} />
-          <div className="relative w-64 bg-gray-900 border-r border-white/10 flex flex-col z-10">
-            <button onClick={() => setSidebarOpen(false)} className="absolute top-4 right-4 text-gray-400 hover:text-white p-1">
-              <X className="w-5 h-5" />
+        <div className="fixed inset-0 z-50 flex lg:hidden">
+          <button
+            type="button"
+            className="absolute inset-0 cursor-default bg-ink/50"
+            onClick={() => setSidebarOpen(false)}
+            aria-label="Close navigation"
+          />
+          <div className="relative flex h-full w-64 flex-col bg-[#16201B]">
+            <button
+              type="button"
+              onClick={() => setSidebarOpen(false)}
+              className="absolute right-3 top-4 rounded-md p-1.5 text-white/60 hover:bg-white/10 hover:text-white"
+              aria-label="Close navigation"
+            >
+              <X className="h-5 w-5" />
             </button>
-            <Sidebar mobile />
+            <Sidebar onNavigate={() => setSidebarOpen(false)} />
           </div>
         </div>
       )}
 
-      {/* Main content */}
-      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        {/* Top bar */}
-        <header className="flex items-center justify-between px-6 py-4 bg-gray-900 border-b border-white/10 flex-shrink-0">
+      <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+        <header className="flex h-14 flex-shrink-0 items-center gap-3 border-b border-line bg-surface px-4 sm:px-6">
           <button
+            type="button"
             onClick={() => setSidebarOpen(true)}
-            className="lg:hidden text-gray-400 hover:text-white p-1 rounded-lg hover:bg-white/5"
+            className="rounded-md p-1.5 text-muted transition-colors hover:bg-muted-surface hover:text-ink lg:hidden"
+            aria-label="Open navigation"
           >
-            <Menu className="w-5 h-5" />
+            <Menu className="h-5 w-5" />
           </button>
-          <div className="flex items-center gap-3 ml-auto">
-            <Link
-              to="/"
-              target="_blank"
-              className="text-xs text-gray-500 hover:text-green-400 transition-colors border border-white/10 px-3 py-1.5 rounded-lg hover:border-green-500/30"
-            >
-              View Store →
-            </Link>
-          </div>
+
+          <p className="text-[13px] font-medium text-ink">{currentTitle}</p>
+
+          <Link
+            to="/"
+            target="_blank"
+            className="ml-auto inline-flex items-center gap-1.5 text-xs text-muted transition-colors hover:text-brand-800"
+          >
+            View store <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
+          </Link>
         </header>
 
-        {/* Page content */}
-        <main className="flex-1 overflow-y-auto p-6">
+        <main id="admin-main" className="flex-1 overflow-y-auto px-4 py-6 sm:px-6 lg:px-8">
           {children}
         </main>
       </div>

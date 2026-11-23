@@ -1,7 +1,10 @@
-import { useState, useEffect } from 'react'
-import { useParams, Link } from 'react-router-dom'
-import { ShoppingCart, Plus, Minus, Tag, BookOpen, GraduationCap, ChevronRight, AlertCircle } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { Link, useParams } from 'react-router-dom'
+import {
+  AlertCircle, BookOpen, Check, ChevronRight, GraduationCap, Minus, Plus, ShoppingCart,
+} from 'lucide-react'
 import { useCartStore } from '../context/cartStore'
+import { useToast } from '../components/ui/Toast'
 import { formatKES, badgeColor } from '../utils/format'
 import { productLevel, productSubject } from '../utils/catalogue'
 import ProductCard from '../components/ProductCard'
@@ -9,14 +12,17 @@ import ProductCard from '../components/ProductCard'
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3000'
 
 export default function ProductDetailPage() {
-  const { id }        = useParams()
-  const addToCart     = useCartStore((s) => s.addToCart)
+  const { id } = useParams()
+  const addToCart = useCartStore((s) => s.addToCart)
+  const inCart = useCartStore((s) => s.items.find((item) => item.id === Number(id)))
+  const { toast } = useToast()
+
   const [qty, setQty] = useState(1)
-  const [added, setAdded]     = useState(false)
+  const [added, setAdded] = useState(false)
   const [product, setProduct] = useState(null)
   const [related, setRelated] = useState([])
   const [loading, setLoading] = useState(true)
-  const [error, setError]     = useState(null)
+  const [error, setError] = useState(null)
   const [imgError, setImgError] = useState(false)
 
   useEffect(() => {
@@ -33,6 +39,7 @@ export default function ProductDetailPage() {
         if (!data.success) throw new Error(data.message || 'Product not found')
         if (cancelled) return
         setProduct(data.data)
+        document.title = `${data.data.name} | Them Bookshop`
 
         const relatedParams = new URLSearchParams({ per_page: '6' })
         if (data.data.subcategory) relatedParams.set('subcategory', data.data.subcategory)
@@ -40,7 +47,7 @@ export default function ProductDetailPage() {
 
         const relRes = await fetch(`${API_BASE}/api/v1/products?${relatedParams}`)
         const relData = await relRes.json()
-        if (!cancelled) setRelated((relData.data || []).filter(p => p.id !== Number(id)).slice(0, 4))
+        if (!cancelled) setRelated((relData.data || []).filter((item) => item.id !== Number(id)).slice(0, 4))
       } catch (e) {
         if (!cancelled) setError(e.message)
       } finally {
@@ -53,175 +60,204 @@ export default function ProductDetailPage() {
   }, [id])
 
   const handleAddToCart = () => {
+    if (!product || product.stock_quantity === 0) return
     addToCart(product, qty)
     setAdded(true)
-    setTimeout(() => setAdded(false), 2000)
+    toast({ title: 'Added to cart', description: `${qty} × ${product.name}` })
   }
 
-  if (loading) return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8 animate-pulse">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-        <div className="aspect-square bg-gray-100 rounded-2xl" />
-        <div className="space-y-4">
-          <div className="h-6 bg-gray-100 rounded w-3/4" />
-          <div className="h-4 bg-gray-100 rounded w-1/2" />
-          <div className="h-24 bg-gray-100 rounded" />
-          <div className="h-8 bg-gray-100 rounded w-32" />
+  if (loading) {
+    return (
+      <div className="container-page py-8 sm:py-10" aria-busy="true">
+        <div className="mb-8 h-4 w-64 rounded-sm bg-muted-surface" />
+        <div className="grid gap-10 md:grid-cols-2">
+          <div className="skeleton aspect-[2/3] w-full max-w-sm" />
+          <div className="space-y-4">
+            <div className="h-8 w-3/4 rounded-sm bg-muted-surface" />
+            <div className="h-5 w-1/2 rounded-sm bg-muted-surface" />
+            <div className="h-24 w-full rounded-sm bg-muted-surface" />
+            <div className="h-7 w-32 rounded-sm bg-muted-surface" />
+          </div>
         </div>
       </div>
-    </div>
-  )
+    )
+  }
 
-  if (error || !product) return (
-    <div className="max-w-7xl mx-auto px-4 py-20 text-center">
-      <AlertCircle className="w-12 h-12 text-red-400 mx-auto mb-4" />
-      <p className="text-gray-500 mb-4">{error || 'Product not found'}</p>
-      <Link to="/shop" className="btn-primary">Back to Shop</Link>
-    </div>
-  )
+  if (error || !product) {
+    return (
+      <div className="container-page py-20">
+        <div className="mx-auto max-w-md border border-line bg-surface px-8 py-12 text-center">
+          <AlertCircle className="mx-auto h-8 w-8 text-danger" aria-hidden="true" />
+          <h1 className="mt-4 text-xl font-semibold">Product unavailable</h1>
+          <p className="mt-2 text-sm text-muted">{error || 'This product could not be found.'}</p>
+          <Link to="/shop" className="btn-primary mt-6">Back to the shop</Link>
+        </div>
+      </div>
+    )
+  }
 
-  const levelLabel   = productLevel(product)
+  const levelLabel = productLevel(product)
   const subjectLabel = productSubject(product)
+  const inStock = product.stock_quantity > 0
+  const lowStock = inStock && product.stock_quantity <= 10
+
+  const crumbHref = product.subcategory
+    ? `/shop?category=${encodeURIComponent(product.category)}&subcategory=${encodeURIComponent(product.subcategory)}`
+    : `/shop?category=${encodeURIComponent(product.category || '')}`
 
   return (
-    <div className="page-enter max-w-7xl mx-auto px-4 sm:px-6 py-8">
-      {/* Breadcrumb */}
-      <nav className="flex items-center gap-2 text-sm text-gray-400 mb-6 font-display">
-        <Link to="/" className="hover:text-brand-600 transition-colors">Home</Link>
-        <ChevronRight className="w-4 h-4" />
-        <Link to="/shop" className="hover:text-brand-600 transition-colors">Shop</Link>
-        <ChevronRight className="w-4 h-4" />
-        <span className="text-gray-600 font-semibold truncate max-w-xs">{product.name}</span>
+    <div className="container-page py-6 sm:py-8">
+      <nav className="flex flex-wrap items-center gap-1.5 text-xs text-muted" aria-label="Breadcrumb">
+        <Link to="/" className="hover:text-ink">Home</Link>
+        <ChevronRight className="h-3.5 w-3.5" aria-hidden="true" />
+        <Link to="/shop" className="hover:text-ink">Shop</Link>
+        <ChevronRight className="h-3.5 w-3.5" aria-hidden="true" />
+        {product.category && (
+          <>
+            <Link to={crumbHref} className="hover:text-ink">{product.subcategory || product.category}</Link>
+            <ChevronRight className="h-3.5 w-3.5" aria-hidden="true" />
+          </>
+        )}
+        <span className="max-w-[18rem] truncate text-ink">{product.name}</span>
       </nav>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 lg:gap-12 mb-16">
-        {/* Image */}
-        <div className="relative">
-          <div className="aspect-square bg-gray-50 rounded-2xl overflow-hidden shadow-sm">
-            {product.image_url && !imgError ? (
-              <img
-                src={product.image_url}
-                alt={product.name}
-                onError={() => setImgError(true)}
-                className="w-full h-full object-cover"
-              />
-            ) : (
-              <div className="w-full h-full flex items-center justify-center">
-                <BookOpen className="w-24 h-24 text-gray-200" />
+      <div className="mt-6 grid gap-10 md:grid-cols-2 lg:gap-16">
+        <div>
+          <div className="relative w-full max-w-sm overflow-hidden border border-line bg-surface p-4">
+            <div className="aspect-[2/3] bg-muted-surface">
+              {product.image_url && !imgError ? (
+                <img
+                  src={product.image_url}
+                  alt={product.name}
+                  onError={() => setImgError(true)}
+                  className="h-full w-full object-contain"
+                />
+              ) : (
+                <div className="flex h-full w-full items-center justify-center">
+                  <BookOpen className="h-14 w-14 text-line-strong" aria-hidden="true" />
+                </div>
+              )}
+            </div>
+
+            {product.badge && (
+              <span className={`absolute left-6 top-6 rounded-sm px-2 py-0.5 text-[11px] font-semibold ${badgeColor(product.badge)}`}>
+                {product.badge}
+              </span>
+            )}
+
+            {!inStock && (
+              <div className="absolute inset-4 flex items-center justify-center bg-paper/80">
+                <span className="rounded-sm bg-ink px-3 py-1.5 text-xs font-semibold text-white">Out of stock</span>
               </div>
             )}
           </div>
-          {product.badge && (
-            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold absolute top-4 left-4 shadow ${badgeColor(product.badge)}`}>
-              {product.badge}
-            </span>
-          )}
-          {product.stock_quantity === 0 && (
-            <div className="absolute inset-0 bg-white/70 flex items-center justify-center rounded-2xl">
-              <span className="bg-gray-800 text-white text-sm font-bold px-4 py-2 rounded-full">Out of Stock</span>
-            </div>
-          )}
         </div>
 
-        {/* Details */}
-        <div>
-          <div className="flex flex-wrap gap-2 mb-3">
-            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-gray-100 text-gray-500">
-              <Tag className="w-3 h-3 mr-1" />{product.subcategory || product.category}
-            </span>
+        <div className="max-w-xl">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted">
             {levelLabel && (
-              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-sky-100 text-sky-700">
-                <GraduationCap className="w-3 h-3 mr-1" />{levelLabel}
+              <span className="inline-flex items-center gap-1.5">
+                <GraduationCap className="h-3.5 w-3.5" aria-hidden="true" />
+                {levelLabel}
               </span>
             )}
-            {product.stage && (
-              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-indigo-100 text-indigo-700">
-                {product.stage}
-              </span>
-            )}
-            {subjectLabel && (
-              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-700">
-                <BookOpen className="w-3 h-3 mr-1" />{subjectLabel}
-              </span>
-            )}
+            {subjectLabel && <span>{subjectLabel}</span>}
+            {product.stage && <span>{product.stage}</span>}
           </div>
 
-          <h1 className="font-display font-extrabold text-2xl md:text-3xl text-gray-900 mb-4 leading-tight">
+          <h1 className="mt-3 font-display text-3xl font-semibold leading-[1.15] tracking-[-0.01em] text-ink sm:text-[38px]">
             {product.name}
           </h1>
 
-          <p className="text-gray-600 leading-relaxed mb-6 text-sm md:text-base">
-            {product.description || 'No description available.'}
+          <p className="mt-4 text-2xl font-semibold tabular-nums text-ink">{formatKES(product.price)}</p>
+
+          <p className={`mt-2 flex items-center gap-1.5 text-sm ${lowStock ? 'text-warning' : inStock ? 'text-success' : 'text-danger'}`}>
+            {inStock ? <Check className="h-4 w-4" aria-hidden="true" /> : <AlertCircle className="h-4 w-4" aria-hidden="true" />}
+            {inStock
+              ? lowStock ? `Only ${product.stock_quantity} left in stock` : 'In stock'
+              : 'Currently out of stock'}
           </p>
 
-          <div className="text-3xl font-display font-bold text-green-600 mb-2">
-            {formatKES(product.price)}
+          <div className="mt-6 border-t border-line pt-6">
+            <p className="text-sm leading-relaxed text-body">
+              {product.description || 'No description is available for this title yet.'}
+            </p>
           </div>
 
-          {product.stock_quantity > 0 && product.stock_quantity <= 10 && (
-            <p className="text-amber-600 text-sm font-semibold mb-4">
-              ⚠️ Only {product.stock_quantity} left in stock
-            </p>
-          )}
-
-          {/* Qty selector */}
-          {product.stock_quantity > 0 && (
-            <div className="flex items-center gap-4 mb-6">
-              <span className="text-sm font-display font-semibold text-gray-600">Quantity:</span>
-              <div className="flex items-center gap-2 bg-gray-100 rounded-xl p-1">
+          {inStock && (
+            <div className="mt-7 flex flex-wrap items-center gap-4">
+              <div className="flex items-center rounded-md border border-line-strong">
                 <button
-                  onClick={() => setQty((q) => Math.max(1, q - 1))}
-                  className="w-9 h-9 flex items-center justify-center rounded-xl hover:bg-white transition-colors text-gray-600"
+                  type="button"
+                  onClick={() => setQty((value) => Math.max(1, value - 1))}
+                  disabled={qty <= 1}
+                  className="flex h-11 w-11 items-center justify-center text-muted transition-colors hover:bg-muted-surface hover:text-ink disabled:opacity-40"
+                  aria-label="Decrease quantity"
                 >
-                  <Minus className="w-4 h-4" />
+                  <Minus className="h-4 w-4" />
                 </button>
-                <span className="w-10 text-center font-display font-bold text-gray-800">{qty}</span>
+                <span className="w-10 text-center text-sm font-semibold tabular-nums text-ink" aria-live="polite">{qty}</span>
                 <button
-                  onClick={() => setQty((q) => Math.min(product.stock_quantity, q + 1))}
-                  className="w-9 h-9 flex items-center justify-center rounded-xl hover:bg-white transition-colors text-gray-600"
+                  type="button"
+                  onClick={() => setQty((value) => Math.min(product.stock_quantity, value + 1))}
+                  disabled={qty >= product.stock_quantity}
+                  className="flex h-11 w-11 items-center justify-center text-muted transition-colors hover:bg-muted-surface hover:text-ink disabled:opacity-40"
+                  aria-label="Increase quantity"
                 >
-                  <Plus className="w-4 h-4" />
+                  <Plus className="h-4 w-4" />
                 </button>
               </div>
+
+              <span className="text-xs text-muted">Quantity</span>
             </div>
           )}
 
-          {/* Add to cart */}
-          <div className="flex flex-col sm:flex-row gap-3">
+          <div className="mt-5 flex flex-col gap-3 sm:flex-row">
             <button
+              type="button"
               onClick={handleAddToCart}
-              disabled={product.stock_quantity === 0}
-              className={`flex items-center justify-center gap-2 font-display font-bold py-3.5 px-8 rounded-xl transition-all duration-200 active:scale-95 shadow-sm text-base disabled:opacity-50 disabled:cursor-not-allowed ${
-                added
-                  ? 'bg-green-100 text-green-700'
-                  : 'bg-green-600 hover:bg-green-700 text-white hover:shadow-md'
-              }`}
+              disabled={!inStock}
+              className="inline-flex h-12 flex-1 items-center justify-center gap-2 rounded-md bg-brand-700 px-6 text-[15px] font-medium text-white transition-colors hover:bg-brand-800 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              <ShoppingCart className="w-5 h-5" />
-              {product.stock_quantity === 0 ? 'Out of Stock' : added ? '✓ Added to Cart!' : 'Add to Cart'}
+              {added ? <Check className="h-5 w-5" aria-hidden="true" /> : <ShoppingCart className="h-5 w-5" aria-hidden="true" />}
+              {inStock ? (added ? 'Added to cart' : 'Add to cart') : 'Out of stock'}
             </button>
-            {added && (
-              <Link to="/cart" className="flex items-center justify-center gap-2 border-2 border-green-500 text-green-600 hover:bg-green-500 hover:text-white font-display font-bold py-3.5 px-8 rounded-xl transition-all duration-200 text-base">
-                View Cart →
+
+            {(added || inCart) && (
+              <Link
+                to="/cart"
+                className="inline-flex h-12 items-center justify-center rounded-md border border-line-strong px-6 text-[15px] font-medium text-ink transition-colors hover:border-brand-700 hover:text-brand-800"
+              >
+                View cart
               </Link>
             )}
           </div>
 
-          {/* Trust badges */}
-          <div className="mt-6 p-4 bg-gray-50 rounded-xl text-sm text-gray-500 space-y-1.5 font-display">
-            <p>🚚 Free delivery on orders over KES 2,000</p>
-            <p>📱 Pay via M-Pesa at checkout</p>
-            <p>✅ Government-approved edition</p>
-          </div>
+          <dl className="mt-8 divide-y divide-line border-y border-line text-sm">
+            <div className="flex justify-between gap-4 py-3">
+              <dt className="text-muted">Payment</dt>
+              <dd className="text-ink">M-Pesa at checkout</dd>
+            </div>
+            <div className="flex justify-between gap-4 py-3">
+              <dt className="text-muted">Delivery</dt>
+              <dd className="text-ink">Free on all orders</dd>
+            </div>
+            <div className="flex justify-between gap-4 py-3">
+              <dt className="text-muted">Order updates</dt>
+              <dd className="text-ink">Email after payment</dd>
+            </div>
+          </dl>
         </div>
       </div>
 
-      {/* Related products */}
       {related.length > 0 && (
-        <section>
-          <h2 className="section-title mb-6">Related Products</h2>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {related.map((p) => <ProductCard key={p.id} product={p} />)}
+        <section className="mt-16 border-t border-line pt-10">
+          <div className="flex items-end justify-between gap-4">
+            <h2 className="text-2xl font-semibold">Related titles</h2>
+            <Link to={crumbHref} className="text-sm text-brand-800 hover:underline">See the shelf</Link>
+          </div>
+          <div className="mt-6 grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-4">
+            {related.map((item) => <ProductCard key={item.id} product={item} />)}
           </div>
         </section>
       )}

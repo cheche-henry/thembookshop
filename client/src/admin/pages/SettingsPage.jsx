@@ -1,125 +1,205 @@
 import { useState } from 'react'
-import { User, Lock, CheckCircle } from 'lucide-react'
+import { Eye, EyeOff, ShieldCheck } from 'lucide-react'
 import { api } from '../utils/api'
 import { useAuthStore } from '../context/authStore'
-import { Input, Btn } from '../components/AdminInput'
+import { Input } from '../../components/ui/Form'
+import { Button } from '../../components/ui/Button'
+import { useToast } from '../../components/ui/Toast'
+
+const MIN_PASSWORD = 8
 
 export default function SettingsPage() {
-  const { admin, refreshMe }    = useAuthStore()
-  const [saving, setSaving]     = useState(false)
-  const [success, setSuccess]   = useState('')
-  const [error, setError]       = useState('')
+  const { admin, refreshMe } = useAuthStore()
+  const { toast } = useToast()
 
-  const [profile, setProfile] = useState({ name: admin?.name || '', email: admin?.email || '', phone: admin?.phone || '' })
-  const [creds, setCreds]     = useState({ current_password: '', password: '', password_confirm: '' })
+  const [savingProfile, setSavingProfile] = useState(false)
+  const [savingPassword, setSavingPassword] = useState(false)
+  const [showPasswords, setShowPasswords] = useState(false)
+  const [errors, setErrors] = useState({})
 
-  const handleProfile = async (e) => {
-    e.preventDefault()
-    setSaving(true); setError(''); setSuccess('')
+  const [profile, setProfile] = useState({
+    name: admin?.name || '',
+    email: admin?.email || '',
+    phone: admin?.phone || '',
+  })
+  const [creds, setCreds] = useState({ current_password: '', password: '', password_confirm: '' })
+
+  const setProfileField = (key, value) => {
+    setProfile((current) => ({ ...current, [key]: value }))
+    setErrors((current) => ({ ...current, [key]: null }))
+  }
+
+  const setCredField = (key, value) => {
+    setCreds((current) => ({ ...current, [key]: value }))
+    setErrors((current) => ({ ...current, [key]: null }))
+  }
+
+  const handleProfile = async (event) => {
+    event.preventDefault()
+
+    const next = {}
+    if (!profile.name.trim()) next.name = 'Enter your name.'
+    if (!profile.email.trim()) next.email = 'Enter an email address.'
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(profile.email.trim())) next.email = 'Enter a valid email address.'
+    if (Object.keys(next).length > 0) {
+      setErrors(next)
+      return
+    }
+
+    setSavingProfile(true)
     try {
-      await api.updateCredentials({ name: profile.name, email: profile.email, phone: profile.phone })
+      await api.updateCredentials({
+        name: profile.name.trim(),
+        email: profile.email.trim(),
+        phone: profile.phone.trim(),
+      })
       await refreshMe()
-      setSuccess('Profile updated successfully')
-    } catch (e) { setError(e.message) } finally { setSaving(false) }
+      toast({ title: 'Profile updated' })
+    } catch (error) {
+      toast({ title: 'Profile could not be saved', description: error.message, tone: 'error' })
+    } finally {
+      setSavingProfile(false)
+    }
   }
 
-  const handlePassword = async (e) => {
-    e.preventDefault()
-    if (creds.password !== creds.password_confirm) { setError('Passwords do not match'); return }
-    if (creds.password.length < 8) { setError('Password must be at least 8 characters'); return }
-    setSaving(true); setError(''); setSuccess('')
+  const handlePassword = async (event) => {
+    event.preventDefault()
+
+    const next = {}
+    if (!creds.current_password) next.current_password = 'Enter your current password.'
+    if (!creds.password) next.password = 'Enter a new password.'
+    else if (creds.password.length < MIN_PASSWORD) next.password = `Use at least ${MIN_PASSWORD} characters.`
+    if (!creds.password_confirm) next.password_confirm = 'Repeat the new password.'
+    else if (creds.password !== creds.password_confirm) next.password_confirm = 'The passwords do not match.'
+
+    if (Object.keys(next).length > 0) {
+      setErrors(next)
+      return
+    }
+
+    setSavingPassword(true)
     try {
-      await api.updateCredentials({ current_password: creds.current_password, password: creds.password })
+      await api.updateCredentials({
+        current_password: creds.current_password,
+        password: creds.password,
+      })
       setCreds({ current_password: '', password: '', password_confirm: '' })
-      setSuccess('Password updated successfully')
-    } catch (e) { setError(e.message) } finally { setSaving(false) }
+      toast({ title: 'Password updated', description: 'Use the new password the next time you sign in.' })
+    } catch (error) {
+      toast({ title: 'Password could not be updated', description: error.message, tone: 'error' })
+    } finally {
+      setSavingPassword(false)
+    }
   }
+
+  const passwordToggle = (
+    <button
+      type="button"
+      onClick={() => setShowPasswords((value) => !value)}
+      className="rounded p-1.5 text-muted transition-colors hover:bg-muted-surface hover:text-ink"
+      aria-label={showPasswords ? 'Hide passwords' : 'Show passwords'}
+    >
+      {showPasswords ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+    </button>
+  )
 
   return (
-    <div className="max-w-xl space-y-6">
+    <div className="max-w-2xl space-y-6">
       <div>
-        <h1 className="text-white font-bold text-2xl">Settings</h1>
-        <p className="text-gray-500 text-sm mt-0.5">Manage your admin account</p>
+        <h1 className="text-2xl font-semibold text-ink">Settings</h1>
+        <p className="mt-1 text-sm text-muted">Manage the admin account used to run the shop.</p>
       </div>
 
-      {success && (
-        <div className="bg-green-500/10 border border-green-500/20 text-green-400 text-sm px-4 py-3 rounded-xl flex items-center gap-2">
-          <CheckCircle className="w-4 h-4 flex-shrink-0" /> {success}
+      <section className="border border-line bg-surface">
+        <div className="border-b border-line px-5 py-3.5">
+          <h2 className="text-sm font-semibold text-ink">Profile</h2>
+          <p className="mt-0.5 text-xs text-muted">Shown in the sidebar and used for account notices.</p>
         </div>
-      )}
-      {error && (
-        <div className="bg-red-500/10 border border-red-500/20 text-red-400 text-sm px-4 py-3 rounded-xl">{error}</div>
-      )}
 
-      {/* Profile */}
-      <div className="bg-gray-900 border border-white/10 rounded-2xl p-6">
-        <h2 className="text-white font-semibold flex items-center gap-2 mb-5">
-          <User className="w-4 h-4 text-green-400" /> Profile
-        </h2>
-        <form onSubmit={handleProfile} className="space-y-4">
+        <form onSubmit={handleProfile} className="space-y-4 px-5 py-5">
           <Input
-            label="Full Name"
+            label="Full name"
             value={profile.name}
-            onChange={e => setProfile(p => ({ ...p, name: e.target.value }))}
+            onChange={(event) => setProfileField('name', event.target.value)}
             placeholder="Bookshop Admin"
+            autoComplete="name"
+            error={errors.name}
           />
           <Input
-            label="Email Address"
+            label="Email address"
             type="email"
             value={profile.email}
-            onChange={e => setProfile(p => ({ ...p, email: e.target.value }))}
+            onChange={(event) => setProfileField('email', event.target.value)}
             placeholder="admin@thembookshop.co.ke"
+            autoComplete="email"
+            error={errors.email}
           />
           <Input
-            label="Phone (optional)"
+            label="Phone"
+            optional
+            type="tel"
             value={profile.phone}
-            onChange={e => setProfile(p => ({ ...p, phone: e.target.value }))}
-            placeholder="+254 700 000 000"
+            onChange={(event) => setProfileField('phone', event.target.value)}
+            placeholder="0712 345 678"
+            autoComplete="tel"
           />
+
           <div className="flex justify-end pt-1">
-            <Btn type="submit" loading={saving}>Save Profile</Btn>
+            <Button type="submit" loading={savingProfile} disabled={savingProfile}>
+              {savingProfile ? 'Saving' : 'Save profile'}
+            </Button>
           </div>
         </form>
-      </div>
+      </section>
 
-      {/* Password */}
-      <div className="bg-gray-900 border border-white/10 rounded-2xl p-6">
-        <h2 className="text-white font-semibold flex items-center gap-2 mb-5">
-          <Lock className="w-4 h-4 text-green-400" /> Change Password
-        </h2>
-        <form onSubmit={handlePassword} className="space-y-4">
+      <section className="border border-line bg-surface">
+        <div className="border-b border-line px-5 py-3.5">
+          <h2 className="text-sm font-semibold text-ink">Password</h2>
+          <p className="mt-0.5 text-xs text-muted">
+            Use at least {MIN_PASSWORD} characters. You stay signed in after changing it.
+          </p>
+        </div>
+
+        <form onSubmit={handlePassword} className="space-y-4 px-5 py-5">
           <Input
-            label="Current Password"
-            type="password"
+            label="Current password"
+            type={showPasswords ? 'text' : 'password'}
             value={creds.current_password}
-            onChange={e => setCreds(c => ({ ...c, current_password: e.target.value }))}
-            placeholder="••••••••"
+            onChange={(event) => setCredField('current_password', event.target.value)}
+            autoComplete="current-password"
+            error={errors.current_password}
+            trailing={passwordToggle}
           />
           <Input
-            label="New Password"
-            type="password"
+            label="New password"
+            type={showPasswords ? 'text' : 'password'}
             value={creds.password}
-            onChange={e => setCreds(c => ({ ...c, password: e.target.value }))}
-            placeholder="Min. 8 characters"
-            hint="Must contain uppercase, lowercase, and a number"
+            onChange={(event) => setCredField('password', event.target.value)}
+            autoComplete="new-password"
+            error={errors.password}
           />
           <Input
-            label="Confirm New Password"
-            type="password"
+            label="Confirm new password"
+            type={showPasswords ? 'text' : 'password'}
             value={creds.password_confirm}
-            onChange={e => setCreds(c => ({ ...c, password_confirm: e.target.value }))}
-            placeholder="••••••••"
+            onChange={(event) => setCredField('password_confirm', event.target.value)}
+            autoComplete="new-password"
+            error={errors.password_confirm}
           />
+
           <div className="flex justify-end pt-1">
-            <Btn type="submit" loading={saving}>Update Password</Btn>
+            <Button type="submit" loading={savingPassword} disabled={savingPassword}>
+              {savingPassword ? 'Updating' : 'Update password'}
+            </Button>
           </div>
         </form>
-      </div>
+      </section>
 
-      {/* Info */}
-      <div className="bg-gray-900 border border-white/10 rounded-2xl p-5 text-sm text-gray-500">
-        <p className="text-gray-400 font-semibold mb-1">Session</p>
-        <p>JWT tokens expire after 24 hours. You'll be logged out automatically.</p>
+      <div className="flex items-start gap-3 border border-line bg-muted-surface px-4 py-3.5">
+        <ShieldCheck className="mt-0.5 h-4 w-4 flex-shrink-0 text-brand-700" aria-hidden="true" />
+        <p className="text-xs leading-relaxed text-muted">
+          Admin sessions expire after 24 hours. When a session ends you are returned to the sign-in screen.
+        </p>
       </div>
     </div>
   )

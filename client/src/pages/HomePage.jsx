@@ -1,193 +1,250 @@
-import { useState, useEffect } from 'react'
-import { Link } from 'react-router-dom'
-import { ArrowRight, Truck, Shield, Phone, Star } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
+import { ArrowRight, BookOpen, Search, Smartphone, Truck } from 'lucide-react'
 import ProductCard from '../components/ProductCard'
 import { SkeletonGrid } from '../components/SkeletonCard'
+import { CLASS_LEVELS } from '../utils/catalogue'
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3000'
 
-const featuredCategories = [
-  {
-    title: 'Primary School', subtitle: 'Grade 1 – 6',
-    description: 'CBC-aligned textbooks, readers and workbooks for lower and upper primary',
-    emoji: '📚', bg: 'bg-sky-50',
-    link: '/shop?category=Books&subcategory=Textbooks',
-  },
-  {
-    title: 'Secondary School', subtitle: 'Form 1 – 4',
-    description: 'KCSE revision guides, set books and coursebooks',
-    emoji: '🎓', bg: 'bg-green-50',
-    link: '/shop?category=Books&subcategory=Revision+%26+Exam+Prep',
-  },
-  {
-    title: 'Stationery', subtitle: 'All Grades',
-    description: 'Exercise books, pens, maths sets, files, calculators & more',
-    emoji: '✏️', bg: 'bg-amber-50',
-    link: '/shop?category=Stationery',
-  },
+const PROMISES = [
+  { icon: Smartphone, title: 'Pay with M-Pesa', body: 'Checkout sends a payment request straight to your phone.' },
+  { icon: Truck, title: 'Free delivery', body: 'Delivery is included on every order.' },
+  { icon: BookOpen, title: 'Browse by grade', body: 'Filter the catalogue by class level and subject.' },
 ]
-
-const highlights = [
-  { icon: Truck,  title: 'Countrywide Delivery', desc: 'We deliver to all 47 counties in Kenya' },
-  { icon: Shield, title: 'Genuine Products',     desc: 'All books are government-approved editions' },
-  { icon: Phone,  title: 'M-Pesa Payments',      desc: 'Easy and secure mobile money checkout' },
-  { icon: Star,   title: 'Trusted by Schools',   desc: 'Serving 10,000+ students across Kenya' },
-]
-
-function useHomeProducts() {
-  const [bestSellers, setBestSellers] = useState([])
-  const [newArrivals, setNewArrivals] = useState([])
-  const [loading, setLoading]         = useState(true)
-
-  useEffect(() => {
-    Promise.all([
-      fetch(`${API_BASE}/api/v1/products?per_page=4`).then(r => r.json()),
-      fetch(`${API_BASE}/api/v1/products?per_page=4&page=2`).then(r => r.json()),
-    ]).then(([best, newOnes]) => {
-      setBestSellers(best.data || [])
-      setNewArrivals(newOnes.data || [])
-    }).catch(console.error)
-      .finally(() => setLoading(false))
-  }, [])
-
-  return { bestSellers, newArrivals, loading }
-}
 
 export default function HomePage() {
-  const { bestSellers, newArrivals, loading } = useHomeProducts()
+  const [products, setProducts] = useState([])
+  const [facets, setFacets] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(false)
+  const [query, setQuery] = useState('')
+  const navigate = useNavigate()
+
+  useEffect(() => {
+    let cancelled = false
+
+    const load = async () => {
+      try {
+        const [listRes, facetRes] = await Promise.all([
+          fetch(`${API_BASE}/api/v1/products?per_page=8`),
+          fetch(`${API_BASE}/api/v1/products/facets`),
+        ])
+        const list = await listRes.json()
+        const facetData = await facetRes.json()
+        if (cancelled) return
+        setProducts(list.data || [])
+        if (facetData.success) setFacets(facetData.data)
+      } catch {
+        if (!cancelled) setError(true)
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    }
+
+    load()
+    return () => { cancelled = true }
+  }, [])
+
+  const handleSearch = (event) => {
+    event.preventDefault()
+    const value = query.trim()
+    navigate(value ? `/shop?search=${encodeURIComponent(value)}` : '/shop')
+  }
+
+  const levels = facets?.levels?.length
+    ? facets.levels
+    : CLASS_LEVELS.map((name) => ({ name, count: null }))
+
+  const subjects = facets?.subjects?.length ? facets.subjects.slice(0, 8) : []
+  const covers = products.filter((product) => product.image_url).slice(0, 3)
 
   return (
-    <div className="page-enter">
-      {/* Hero */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-green-600 via-green-700 to-sky-700 text-white">
-        <div className="absolute top-0 right-0 w-96 h-96 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/3" />
-        <div className="absolute bottom-0 left-0 w-64 h-64 bg-white/5 rounded-full translate-y-1/2 -translate-x-1/4" />
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-16 md:py-24 relative">
-          <div className="max-w-2xl">
-            <div className="inline-flex items-center gap-2 bg-white/20 backdrop-blur rounded-full px-4 py-1.5 text-sm font-semibold mb-6" style={{fontFamily:'Nunito,sans-serif'}}>
-              <span className="w-2 h-2 bg-amber-400 rounded-full animate-pulse" />
-              Back to School 2025 — Up to 20% Off Selected Items
-            </div>
-            <h1 className="font-extrabold text-4xl md:text-5xl lg:text-6xl leading-tight mb-4" style={{fontFamily:'Nunito,sans-serif'}}>
-              All Your School<br />Needs in One Place
+    <div>
+      {/* Front table */}
+      <section className="border-b border-line bg-paper">
+        <div className="container-page grid gap-12 py-14 lg:grid-cols-[1.05fr_0.95fr] lg:items-center lg:py-20">
+          <div className="max-w-xl">
+            <p className="eyebrow">School books and supplies · Kenya</p>
+            <h1 className="mt-4 font-display text-[34px] font-semibold leading-[1.12] tracking-[-0.015em] text-ink sm:text-[44px]">
+              Books for the school year, in one place.
             </h1>
-            <p className="text-white/80 text-lg md:text-xl mb-8 max-w-xl leading-relaxed">
-              Quality textbooks, exercise books, stationery, and school supplies — delivered to your door anywhere in Kenya.
+            <p className="mt-5 max-w-lg text-[15px] leading-relaxed text-muted sm:text-base">
+              Textbooks, readers, revision guides and stationery for primary and secondary learners.
+              Find what you need by title, subject or class level.
             </p>
-            <div className="flex flex-wrap gap-3">
-              <Link to="/shop" className="inline-flex items-center gap-2 bg-white text-green-700 font-bold px-6 py-3 rounded-xl hover:bg-green-50 transition-colors shadow-lg" style={{fontFamily:'Nunito,sans-serif'}}>
-                Shop Now <ArrowRight className="w-4 h-4" />
-              </Link>
-              <Link to="/shop?subcategory=Revision+%26+Exam+Prep" className="inline-flex items-center gap-2 bg-white/20 hover:bg-white/30 text-white font-semibold px-6 py-3 rounded-xl transition-colors border border-white/30" style={{fontFamily:'Nunito,sans-serif'}}>
-                Revision Books
-              </Link>
+
+            <form onSubmit={handleSearch} role="search" className="mt-8 flex max-w-lg gap-2">
+              <div className="relative flex-1">
+                <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" aria-hidden="true" />
+                <input
+                  type="search"
+                  value={query}
+                  onChange={(event) => setQuery(event.target.value)}
+                  placeholder="Search for a title, subject or grade"
+                  aria-label="Search the catalogue"
+                  className="h-12 w-full rounded-md border border-line-strong bg-surface pl-10 pr-3 text-sm text-ink placeholder:text-muted/80 focus:border-brand-700 focus:outline-none focus:ring-2 focus:ring-brand-700/20"
+                />
+              </div>
+              <button
+                type="submit"
+                className="h-12 rounded-md bg-brand-700 px-5 text-sm font-medium text-white transition-colors hover:bg-brand-800"
+              >
+                Search
+              </button>
+            </form>
+
+            <div className="mt-6 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm">
+              <span className="text-muted">Jump to</span>
+              <Link to="/shop?category=Books&subcategory=Textbooks" className="text-brand-800 underline-offset-4 hover:underline">Textbooks</Link>
+              <Link to="/shop?subcategory=Revision+%26+Exam+Prep" className="text-brand-800 underline-offset-4 hover:underline">Revision</Link>
+              <Link to="/shop?category=Stationery" className="text-brand-800 underline-offset-4 hover:underline">Stationery</Link>
             </div>
+          </div>
+
+          <div className="hidden lg:block">
+            {covers.length > 0 ? (
+              <div className="grid grid-cols-3 items-end gap-4">
+                {covers.map((product) => (
+                  <Link
+                    key={product.id}
+                    to={`/product/${product.id}`}
+                    className="block border border-line bg-surface p-2 transition-colors hover:border-line-strong"
+                  >
+                    <div className="aspect-[2/3] bg-muted-surface">
+                      <img
+                        src={product.image_url}
+                        alt=""
+                        className="h-full w-full object-contain"
+                        loading="lazy"
+                      />
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            ) : (
+              <div className="flex aspect-[4/3] flex-col justify-between border border-line bg-surface p-8">
+                <BookOpen className="h-8 w-8 text-line-strong" aria-hidden="true" />
+                <div>
+                  <p className="font-display text-2xl font-semibold text-ink">The shelves are open.</p>
+                  <p className="mt-2 max-w-xs text-sm leading-relaxed text-muted">
+                    Browse the catalogue by department, class level or subject.
+                  </p>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </section>
 
-      {/* Banner */}
-      <div className="bg-amber-400">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex flex-wrap items-center justify-between gap-2">
-          <p className="font-bold text-amber-900 text-sm" style={{fontFamily:'Nunito,sans-serif'}}>
-            🎒 Back to School Sale — Stock up now before school reopens!
-          </p>
-          <Link to="/shop" className="text-xs font-bold text-amber-900 underline hover:no-underline" style={{fontFamily:'Nunito,sans-serif'}}>
-            View All Offers →
+      {/* Shop by level */}
+      <section className="container-page py-12 sm:py-16">
+        <div className="flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <p className="eyebrow">Class levels</p>
+            <h2 className="mt-2 text-2xl font-semibold sm:text-[28px]">Shop by grade</h2>
+          </div>
+          <Link to="/shop" className="inline-flex items-center gap-1.5 text-sm text-brand-800 hover:underline">
+            All products <ArrowRight className="h-4 w-4" aria-hidden="true" />
           </Link>
         </div>
-      </div>
 
-      {/* Trust highlights */}
-      <section className="bg-white border-b border-gray-100">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-            {highlights.map(({ icon: Icon, title, desc }) => (
-              <div key={title} className="flex items-start gap-3">
-                <div className="w-9 h-9 bg-green-100 rounded-xl flex items-center justify-center flex-shrink-0">
-                  <Icon className="w-4 h-4 text-green-600" />
-                </div>
-                <div>
-                  <p className="font-bold text-gray-800 text-sm" style={{fontFamily:'Nunito,sans-serif'}}>{title}</p>
-                  <p className="text-xs text-gray-500 mt-0.5">{desc}</p>
-                </div>
-              </div>
-            ))}
-          </div>
+        <div className="mt-6 grid grid-cols-2 gap-x-8 border-t border-line sm:grid-cols-3 lg:grid-cols-6">
+          {levels.map((level) => (
+            <Link
+              key={level.name}
+              to={`/shop?class_level=${encodeURIComponent(level.name)}`}
+              className="flex items-baseline justify-between gap-2 border-b border-line py-3 text-sm text-body transition-colors hover:text-brand-800"
+            >
+              <span>{level.name}</span>
+              {level.count != null && <span className="text-xs tabular-nums text-muted">{level.count}</span>}
+            </Link>
+          ))}
         </div>
       </section>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6">
-        {/* Categories */}
-        <section className="py-12">
-          <h2 className="text-2xl md:text-3xl font-bold text-gray-800 mb-6" style={{fontFamily:'Nunito,sans-serif'}}>Shop by Category</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
-            {featuredCategories.map((cat) => (
-              <Link key={cat.title} to={cat.link} className={`${cat.bg} rounded-2xl p-6 hover:shadow-md transition-all duration-300 group hover:-translate-y-1`}>
-                <div className="text-4xl mb-3">{cat.emoji}</div>
-                <h3 className="font-bold text-gray-800 text-lg" style={{fontFamily:'Nunito,sans-serif'}}>{cat.title}</h3>
-                <p className="text-xs font-semibold text-gray-500 mb-2">{cat.subtitle}</p>
-                <p className="text-sm text-gray-600 mb-4 leading-relaxed">{cat.description}</p>
-                <div className="flex items-center gap-1 text-green-600 text-sm font-bold group-hover:gap-2 transition-all" style={{fontFamily:'Nunito,sans-serif'}}>
-                  Browse <ArrowRight className="w-4 h-4" />
-                </div>
+      {/* Shop by subject */}
+      {subjects.length > 0 && (
+        <section className="border-y border-line bg-surface">
+          <div className="container-page py-12 sm:py-16">
+            <div className="flex flex-wrap items-end justify-between gap-4">
+              <div>
+                <p className="eyebrow">Subjects</p>
+                <h2 className="mt-2 text-2xl font-semibold sm:text-[28px]">Shop by subject</h2>
+              </div>
+              <Link to="/shop" className="inline-flex items-center gap-1.5 text-sm text-brand-800 hover:underline">
+                See the catalogue <ArrowRight className="h-4 w-4" aria-hidden="true" />
               </Link>
-            ))}
+            </div>
+
+            <div className="mt-6 grid grid-cols-2 gap-x-8 sm:grid-cols-3 lg:grid-cols-4">
+              {subjects.map((subject) => (
+                <Link
+                  key={subject.name}
+                  to={`/shop?subject=${encodeURIComponent(subject.name)}`}
+                  className="flex items-baseline justify-between gap-2 border-b border-line py-3 text-sm text-body transition-colors hover:text-brand-800"
+                >
+                  <span>{subject.name}</span>
+                  <span className="text-xs tabular-nums text-muted">{subject.count}</span>
+                </Link>
+              ))}
+            </div>
           </div>
         </section>
+      )}
 
-        {/* Best Sellers */}
-        <section className="py-8">
-          <div className="flex items-end justify-between mb-6">
-            <div>
-              <h2 className="text-2xl md:text-3xl font-bold text-gray-800" style={{fontFamily:'Nunito,sans-serif'}}>Featured Products</h2>
-              <p className="text-sm text-gray-500 mt-1">From our store</p>
-            </div>
-            <Link to="/shop" className="text-green-600 font-semibold text-sm hover:text-green-800 flex items-center gap-1" style={{fontFamily:'Nunito,sans-serif'}}>
-              View all <ArrowRight className="w-4 h-4" />
-            </Link>
+      {/* Catalogue */}
+      <section className="container-page py-12 sm:py-16">
+        <div className="flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <p className="eyebrow">Catalogue</p>
+            <h2 className="mt-2 text-2xl font-semibold sm:text-[28px]">Books and supplies</h2>
           </div>
-          {loading ? <SkeletonGrid count={4} /> : (
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              {bestSellers.map((p) => <ProductCard key={p.id} product={p} />)}
+          <Link to="/shop" className="inline-flex items-center gap-1.5 text-sm text-brand-800 hover:underline">
+            View all products <ArrowRight className="h-4 w-4" aria-hidden="true" />
+          </Link>
+        </div>
+
+        <div className="mt-6">
+          {loading ? (
+            <SkeletonGrid count={4} />
+          ) : error ? (
+            <div className="border border-line bg-surface px-6 py-10 text-center">
+              <p className="text-sm text-muted">The catalogue could not be loaded. Check your connection and try again.</p>
+              <button
+                type="button"
+                onClick={() => window.location.reload()}
+                className="mt-4 text-sm font-medium text-brand-800 hover:underline"
+              >
+                Reload the page
+              </button>
+            </div>
+          ) : products.length === 0 ? (
+            <div className="border border-dashed border-line-strong bg-surface px-6 py-10 text-center">
+              <p className="text-sm text-muted">No products are listed yet.</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-4">
+              {products.map((product) => <ProductCard key={product.id} product={product} />)}
             </div>
           )}
-        </section>
+        </div>
+      </section>
 
-        {/* Promo banner */}
-        <section className="py-8">
-          <div className="bg-gradient-to-r from-sky-100 to-green-100 rounded-2xl p-8 md:p-10 flex flex-col md:flex-row items-center gap-6">
-            <div className="text-5xl">📦</div>
-            <div className="flex-1 text-center md:text-left">
-              <h3 className="font-bold text-2xl text-gray-800 mb-2" style={{fontFamily:'Nunito,sans-serif'}}>Buy More, Save More</h3>
-              <p className="text-gray-600 text-sm leading-relaxed">
-                Purchase items worth KES 2,000 or more and get free delivery anywhere in Kenya!
-              </p>
-            </div>
-            <Link to="/shop" className="bg-green-600 hover:bg-green-700 text-white font-bold px-6 py-3 rounded-xl transition-colors whitespace-nowrap shadow-sm" style={{fontFamily:'Nunito,sans-serif'}}>
-              Shop Now
-            </Link>
-          </div>
-        </section>
-
-        {/* More Products */}
-        {!loading && newArrivals.length > 0 && (
-          <section className="py-8">
-            <div className="flex items-end justify-between mb-6">
+      {/* What we can promise */}
+      <section className="border-t border-line bg-surface">
+        <div className="container-page grid gap-8 py-10 sm:grid-cols-3">
+          {PROMISES.map(({ icon: Icon, title, body }) => (
+            <div key={title} className="flex gap-3">
+              <Icon className="mt-0.5 h-5 w-5 flex-shrink-0 text-brand-700" aria-hidden="true" />
               <div>
-                <h2 className="text-2xl md:text-3xl font-bold text-gray-800" style={{fontFamily:'Nunito,sans-serif'}}>More Products</h2>
-                <p className="text-sm text-gray-500 mt-1">Keep exploring</p>
+                <p className="text-sm font-medium text-ink">{title}</p>
+                <p className="mt-1 text-[13px] leading-relaxed text-muted">{body}</p>
               </div>
-              <Link to="/shop" className="text-green-600 font-semibold text-sm hover:text-green-800 flex items-center gap-1" style={{fontFamily:'Nunito,sans-serif'}}>
-                View all <ArrowRight className="w-4 h-4" />
-              </Link>
             </div>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              {newArrivals.map((p) => <ProductCard key={p.id} product={p} />)}
-            </div>
-          </section>
-        )}
-      </div>
+          ))}
+        </div>
+      </section>
     </div>
   )
 }

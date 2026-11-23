@@ -1,16 +1,13 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
+import { useSearchParams } from 'react-router-dom'
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3000'
 const ALL = 'all'
 
 const FILTER_KEYS = ['search', 'category', 'subcategory', 'stage', 'classLevel', 'subject', 'subsubject']
 
-// Storefront filter state. Accepts an options object so callers can seed from
-// URL params:
-//   useFilters({ search, category, subcategory, stage, classLevel, subject, subsubject })
-//
-// Departments (category) own subcategories, and subjects own components, so
-// changing a parent clears the child it invalidates.
+// Storefront filter state. The URL is the durable copy of the filters so that
+// reloads, browser history and shared links all restore the same shelf.
 export function useFilters(initial = {}) {
   const [search, setSearch]             = useState(initial.search || '')
   const [category, setCategory]         = useState(initial.category || ALL)
@@ -25,7 +22,11 @@ export function useFilters(initial = {}) {
   const [error, setError]       = useState(null)
   const [meta, setMeta]         = useState(null)
   const [facets, setFacets]     = useState(null)
-  const [page, setPage]         = useState(1)
+  const [page, setPage]         = useState(initial.page || 1)
+
+  const [searchParams, setSearchParams] = useSearchParams()
+  const paramsString = searchParams.toString()
+  const lastSyncedRef = useRef(null)
 
   const debounceRef = useRef(null)
   const mountedRef  = useRef(false)
@@ -47,6 +48,43 @@ export function useFilters(initial = {}) {
     return () => { cancelled = true }
   }, [])
 
+  // External URL changes (navbar search, back button, shared link) update state.
+  useEffect(() => {
+    if (lastSyncedRef.current === paramsString) return
+
+    const read = (key) => searchParams.get(key) || ALL
+    setSearch(searchParams.get('search') || '')
+    setCategory(read('category'))
+    setSubcategory(read('subcategory'))
+    setStage(read('stage'))
+    setClassLevel(read('class_level'))
+    setSubject(read('subject'))
+    setSubsubject(read('subsubject'))
+    setPage(Math.max(1, Number(searchParams.get('page')) || 1))
+    lastSyncedRef.current = paramsString
+    // searchParams is intentionally read through paramsString.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [paramsString])
+
+  // State changes are written back to the URL without adding history entries.
+  useEffect(() => {
+    const next = new URLSearchParams()
+    if (search) next.set('search', search)
+    if (category !== ALL) next.set('category', category)
+    if (subcategory !== ALL) next.set('subcategory', subcategory)
+    if (stage !== ALL) next.set('stage', stage)
+    if (classLevel !== ALL) next.set('class_level', classLevel)
+    if (subject !== ALL) next.set('subject', subject)
+    if (subsubject !== ALL) next.set('subsubject', subsubject)
+    if (page > 1) next.set('page', String(page))
+
+    const nextString = next.toString()
+    if (nextString === paramsString) return
+
+    lastSyncedRef.current = nextString
+    setSearchParams(next, { replace: true })
+  }, [search, category, subcategory, stage, classLevel, subject, subsubject, page, paramsString, setSearchParams])
+
   const fetchProducts = useCallback(async (params) => {
     const id = ++fetchIdRef.current
     setLoading(true)
@@ -54,14 +92,14 @@ export function useFilters(initial = {}) {
 
     try {
       const query = new URLSearchParams()
-      if (params.q)                                        query.set('q', params.q)
-      if (params.category && params.category !== ALL)      query.set('category', params.category)
+      if (params.q)                                       query.set('q', params.q)
+      if (params.category && params.category !== ALL)     query.set('category', params.category)
       if (params.subcategory && params.subcategory !== ALL) query.set('subcategory', params.subcategory)
-      if (params.stage && params.stage !== ALL)            query.set('stage', params.stage)
-      if (params.classLevel && params.classLevel !== ALL)  query.set('class_level', params.classLevel)
-      if (params.subject && params.subject !== ALL)        query.set('subject', params.subject)
-      if (params.subsubject && params.subsubject !== ALL)  query.set('subsubject', params.subsubject)
-      if (params.page)                                     query.set('page', params.page)
+      if (params.stage && params.stage !== ALL)           query.set('stage', params.stage)
+      if (params.classLevel && params.classLevel !== ALL) query.set('class_level', params.classLevel)
+      if (params.subject && params.subject !== ALL)       query.set('subject', params.subject)
+      if (params.subsubject && params.subsubject !== ALL) query.set('subsubject', params.subsubject)
+      if (params.page)                                    query.set('page', params.page)
       query.set('per_page', '24')
 
       const res  = await fetch(`${API_BASE}/api/v1/products?${query}`)
@@ -72,7 +110,7 @@ export function useFilters(initial = {}) {
       setMeta(data.meta || null)
     } catch (e) {
       if (id !== fetchIdRef.current) return
-      setError('Could not load products. Is the API running?')
+      setError('Could not load products. Check your connection and try again.')
       console.error(e)
     } finally {
       if (id === fetchIdRef.current) setLoading(false)
@@ -88,7 +126,7 @@ export function useFilters(initial = {}) {
       fetchProducts({ q: search, category, subcategory, stage, classLevel, subject, subsubject, page })
     }, delay)
     return () => clearTimeout(debounceRef.current)
-  }, [search, category, subcategory, stage, classLevel, subject, subsubject, page])
+  }, [search, category, subcategory, stage, classLevel, subject, subsubject, page, fetchProducts])
 
   // Any filter change starts a new result set, so the page has to go back to 1
   // (otherwise page 5 of the previous filters is requested and often empty).
@@ -136,6 +174,10 @@ export function useFilters(initial = {}) {
     setPage(1)
   }
 
+  const refetch = useCallback(() => {
+    fetchProducts({ q: search, category, subcategory, stage, classLevel, subject, subsubject, page })
+  }, [fetchProducts, search, category, subcategory, stage, classLevel, subject, subsubject, page])
+
   const hasFilters = FILTER_KEYS.some((key) => {
     const value = { search, category, subcategory, stage, classLevel, subject, subsubject }[key]
     return value !== ALL && value !== ''
@@ -156,6 +198,7 @@ export function useFilters(initial = {}) {
     facets,
     page, setPage,
     reset,
+    refetch,
     hasFilters,
   }
 }

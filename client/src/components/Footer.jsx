@@ -1,54 +1,77 @@
 import { Link } from 'react-router-dom'
-import { BookOpen, Phone, MapPin, Mail } from 'lucide-react'
-const categoryLinks = [
-  { label: 'Textbooks',             to: '/shop?category=Books&subcategory=Textbooks' },
-  { label: 'Revision & Exam Prep',  to: '/shop?subcategory=Revision+%26+Exam+Prep' },
-  { label: 'Set Books & Literature', to: '/shop?subcategory=Set+Books+%26+Literature' },
-  { label: 'Exercise Books',        to: '/shop?subcategory=Exercise+Books+%26+Notebooks' },
-  { label: 'Writing & Correction',  to: '/shop?subcategory=Writing+%26+Correction' },
-  { label: 'Math Sets',             to: '/shop?subcategory=Math+Sets+%26+Technical+Drawing' },
+import { BookOpen } from 'lucide-react'
+
+const shopLinks = [
+  { label: 'All products', to: '/shop' },
+  { label: 'Textbooks', to: '/shop?category=Books&subcategory=Textbooks' },
+  { label: 'Revision & exam prep', to: '/shop?subcategory=Revision+%26+Exam+Prep' },
+  { label: 'Stationery', to: '/shop?category=Stationery' },
+]
+
+const levelLinks = [
+  { label: 'PP1 – PP2', to: '/shop?stage=Pre-Primary' },
+  { label: 'Grade 1 – 3', to: '/shop?stage=Lower%20Primary' },
+  { label: 'Grade 4 – 6', to: '/shop?stage=Upper%20Primary' },
+  { label: 'Form 1 – 4', to: '/shop?stage=Secondary%20(8-4-4)' },
 ]
 
 export default function Footer() {
   return (
-    <footer className="bg-gray-900 text-gray-300 mt-20">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-14">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-10">
-          <div>
-            <div className="flex items-center gap-2 mb-4">
-              <div className="w-9 h-9 bg-green-600 rounded-xl flex items-center justify-center"><BookOpen className="w-5 h-5 text-white" /></div>
-              <div><span className="font-bold text-white text-lg block leading-none" style={{fontFamily:'Nunito,sans-serif'}}>Them Bookshop</span><span className="text-xs text-green-400 block">All Your School Needs</span></div>
-            </div>
-            <p className="text-sm leading-relaxed text-gray-400">Kenya's trusted school supply store. Quality textbooks, stationery, and learning materials for primary and secondary students.</p>
+    <footer className="mt-20 border-t border-line bg-ink text-white">
+      <div className="container-page py-14">
+        <div className="grid grid-cols-1 gap-10 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="lg:col-span-2 lg:max-w-sm">
+            <Link to="/" className="flex items-center gap-2.5">
+              <span className="flex h-9 w-9 items-center justify-center rounded-md bg-brand-700">
+                <BookOpen className="h-[18px] w-[18px] text-white" aria-hidden="true" />
+              </span>
+              <span className="font-display text-lg font-semibold text-white">Them Bookshop</span>
+            </Link>
+            <p className="mt-4 text-sm leading-relaxed text-white/60">
+              Textbooks, readers, revision guides and stationery for Kenyan primary and secondary learners.
+            </p>
+            <dl className="mt-6 space-y-1.5 text-sm text-white/70">
+              <div className="flex gap-2">
+                <dt className="text-white/40">Payment</dt>
+                <dd>M-Pesa at checkout</dd>
+              </div>
+              <div className="flex gap-2">
+                <dt className="text-white/40">Delivery</dt>
+                <dd>Free on all orders</dd>
+              </div>
+            </dl>
           </div>
+
           <div>
-            <h3 className="font-bold text-white mb-4" style={{fontFamily:'Nunito,sans-serif'}}>Quick Links</h3>
-            <ul className="space-y-2 text-sm">
-              {[{to:'/',l:'Home'},{to:'/shop',l:'All Products'},{to:'/cart',l:'My Cart'}].map(x=>(
-                <li key={x.to}><Link to={x.to} className="hover:text-green-400 transition-colors">{x.l}</Link></li>
+            <h2 className="eyebrow text-white/40">Shop</h2>
+            <ul className="mt-4 space-y-2.5 text-sm">
+              {shopLinks.map((link) => (
+                <li key={link.to}>
+                  <Link to={link.to} className="text-white/70 transition-colors hover:text-white">
+                    {link.label}
+                  </Link>
+                </li>
               ))}
             </ul>
           </div>
+
           <div>
-            <h3 className="font-bold text-white mb-4" style={{fontFamily:'Nunito,sans-serif'}}>Categories</h3>
-            <ul className="space-y-2 text-sm">
-              {categoryLinks.map((c) => (
-                <li key={c.label}><Link to={c.to} className="hover:text-green-400 transition-colors">{c.label}</Link></li>
+            <h2 className="eyebrow text-white/40">Browse by level</h2>
+            <ul className="mt-4 space-y-2.5 text-sm">
+              {levelLinks.map((link) => (
+                <li key={link.to}>
+                  <Link to={link.to} className="text-white/70 transition-colors hover:text-white">
+                    {link.label}
+                  </Link>
+                </li>
               ))}
-            </ul>
-          </div>
-          <div>
-            <h3 className="font-bold text-white mb-4" style={{fontFamily:'Nunito,sans-serif'}}>Contact Us</h3>
-            <ul className="space-y-3 text-sm">
-              <li className="flex items-start gap-3"><Phone className="w-4 h-4 text-green-400 mt-0.5 flex-shrink-0" /><span>+254 700 000 000<br/><span className="text-xs text-gray-500">Mon–Sat 8am–6pm</span></span></li>
-              <li className="flex items-start gap-3"><MapPin className="w-4 h-4 text-green-400 mt-0.5 flex-shrink-0" /><span>Nairobi, Kenya<br/><span className="text-xs text-gray-500">Delivery countrywide</span></span></li>
-              <li className="flex items-start gap-3"><Mail className="w-4 h-4 text-green-400 mt-0.5 flex-shrink-0" /><span>hello@thembookshop.co.ke</span></li>
             </ul>
           </div>
         </div>
-        <div className="border-t border-gray-800 mt-10 pt-6 flex flex-col sm:flex-row justify-between items-center gap-4 text-xs text-gray-500">
-          <p>© 2025 Them Bookshop. All rights reserved.</p>
-          <p>We accept M-Pesa · Delivery Countrywide 🇰🇪</p>
+
+        <div className="mt-12 flex flex-col justify-between gap-3 border-t border-white/10 pt-6 text-xs text-white/40 sm:flex-row">
+          <p>© {new Date().getFullYear()} Them Bookshop. All rights reserved.</p>
+          <p>Prices in Kenyan shillings.</p>
         </div>
       </div>
     </footer>

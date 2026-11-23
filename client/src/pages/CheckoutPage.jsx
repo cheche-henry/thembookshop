@@ -1,8 +1,12 @@
-import { useState, useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Phone, MapPin, User, ShoppingBag, CheckCircle, AlertCircle, Smartphone, Clock, Shield } from 'lucide-react'
+import {
+  AlertCircle, CheckCircle, ChevronRight, Clock, Mail, Package, Shield, Smartphone,
+} from 'lucide-react'
 import { useCartStore } from '../context/cartStore'
-import Field from '../components/Field'
+import { Input, Select, Textarea } from '../components/ui/Form'
+import { Button } from '../components/ui/Button'
+import { EmptyCart } from '../components/EmptyState'
 import { formatKES } from '../utils/format'
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3000'
@@ -13,6 +17,8 @@ const LOCATIONS = [
   'Machakos','Meru','Garissa','Kakamega','Other (specify in notes)',
 ]
 
+const STEPS = ['Your details', 'M-Pesa prompt', 'Enter PIN', 'Order confirmed']
+
 const newIdempotencyKey = () => (
   typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
     ? crypto.randomUUID()
@@ -20,19 +26,18 @@ const newIdempotencyKey = () => (
 )
 
 export default function CheckoutPage() {
-  const items     = useCartStore((s) => s.items)
+  const items = useCartStore((s) => s.items)
   const clearCart = useCartStore((s) => s.clearCart)
 
   const [freshPrices, setFreshPrices] = useState(null)
-  const [form, setForm]     = useState({ fullName:'', phone:'', email:'', location:'', notes:'' })
+  const [form, setForm] = useState({ fullName: '', phone: '', email: '', location: '', notes: '' })
   const [errors, setErrors] = useState({})
-  const [submitting, setSub] = useState(false)
-  const [apiError, setApiErr] = useState('')
-  const [order, setOrder]   = useState(null)
+  const [submitting, setSubmitting] = useState(false)
+  const [apiError, setApiError] = useState('')
+  const [order, setOrder] = useState(null)
 
-  const itemIds = items.map(i => i.id).join(',')
-  const idempotencyKey = newIdempotencyKey()
-  const [submitKey, setSubmitKey] = useState(idempotencyKey)
+  const itemIds = items.map((item) => item.id).join(',')
+  const [submitKey, setSubmitKey] = useState(newIdempotencyKey)
 
   // A new cart means a genuinely new order; only retries of the same cart
   // reuse the idempotency key.
@@ -41,14 +46,14 @@ export default function CheckoutPage() {
   // Fetch fresh prices from the API so the summary isn't based on stale
   // localStorage data. Only the products actually in the cart are requested.
   useEffect(() => {
-    if (!itemIds) return
+    if (!itemIds) return undefined
     let cancelled = false
     fetch(`${API_BASE}/api/v1/products?ids=${encodeURIComponent(itemIds)}&per_page=100`)
-      .then(r => r.json())
-      .then(data => {
+      .then((response) => response.json())
+      .then((data) => {
         if (cancelled) return
         const map = {}
-        ;(data.data || []).forEach(p => { map[p.id] = p })
+        ;(data.data || []).forEach((product) => { map[product.id] = product })
         setFreshPrices(map)
       })
       .catch(() => {}) // fall back to cart prices on network error
@@ -62,259 +67,256 @@ export default function CheckoutPage() {
     const value = Number(fresh?.stock_quantity ?? item.stock_quantity)
     return Number.isFinite(value) ? value : null
   }
-  const total = items.reduce((sum, i) => sum + price(i) * i.quantity, 0)
+  const total = items.reduce((sum, item) => sum + price(item) * item.quantity, 0)
 
-  if (items.length === 0 && !order) return <EmptyCart />
+  if (items.length === 0 && !order) {
+    return (
+      <div className="container-page py-10 sm:py-14">
+        <div className="mb-8">
+          <p className="eyebrow">Checkout</p>
+          <h1 className="mt-2 text-3xl font-semibold">Delivery and payment</h1>
+        </div>
+        <EmptyCart />
+      </div>
+    )
+  }
   if (order) return <OrderConfirmation order={order} phone={form.phone} />
 
   const normalizePhone = (value) => value.replace(/[\s\-()]/g, '')
 
   const validate = () => {
-    const e = {}
-    if (!form.fullName.trim()) e.fullName = 'Full name is required'
+    const next = {}
+    if (!form.fullName.trim()) next.fullName = 'Enter the name for this delivery.'
 
     const phone = normalizePhone(form.phone)
-    if (!phone) e.phone = 'Phone number is required'
+    if (!phone) next.phone = 'Enter the phone number that will pay.'
     else if (!/^(07|01|\+2547|\+2541|2547|2541)\d{8}$/.test(phone))
-      e.phone = 'Enter a valid Kenyan number (e.g. 0712345678)'
+      next.phone = 'Enter a valid Kenyan number, for example 0712345678.'
 
     if (form.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim()))
-      e.email = 'Enter a valid email address'
+      next.email = 'Enter a valid email address.'
 
-    if (!form.location) e.location = 'Please select your delivery location'
+    if (!form.location) next.location = 'Choose a delivery location.'
 
-    const outOfStock = items.find(i => { const s = stock(i); return s !== null && s < i.quantity })
-    if (outOfStock) e.cart = `Only ${stock(outOfStock)} of "${outOfStock.name}" available. Please update your cart.`
+    const outOfStock = items.find((item) => {
+      const available = stock(item)
+      return available !== null && available < item.quantity
+    })
+    if (outOfStock) next.cart = `Only ${stock(outOfStock)} of “${outOfStock.name}” are available. Please update your cart.`
 
-    return e
+    return next
   }
 
-  const handleSubmit = async (e) => {
-    e.preventDefault()
-    const errs = validate()
-    if (Object.keys(errs).length > 0) { setErrors(errs); return }
-    setSub(true)
-    setApiErr('')
+  const setField = (key, value) => {
+    setForm((current) => ({ ...current, [key]: value }))
+    setErrors((current) => ({ ...current, [key]: '' }))
+  }
+
+  const handleSubmit = async (event) => {
+    event.preventDefault()
+    const next = validate()
+    if (Object.keys(next).length > 0) {
+      setErrors(next)
+      return
+    }
+
+    setSubmitting(true)
+    setApiError('')
+
     try {
       const res = await fetch(`${API_BASE}/api/v1/orders`, {
-        method:  'POST',
+        method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Idempotency-Key': submitKey,
         },
         body: JSON.stringify({
           order: {
-            customer_name:     form.fullName,
-            customer_phone:    normalizePhone(form.phone),
-            customer_email:    form.email.trim(),
-            delivery_address:  form.location,
+            customer_name: form.fullName,
+            customer_phone: normalizePhone(form.phone),
+            customer_email: form.email.trim(),
+            delivery_address: form.location,
             delivery_location: form.location,
-            notes:             form.notes,
-            items: items.map(i => ({ product_id: i.id, quantity: i.quantity })),
-          }
+            notes: form.notes,
+            items: items.map((item) => ({ product_id: item.id, quantity: item.quantity })),
+          },
         }),
       })
       const data = await res.json()
-      if (!res.ok || !data.success) throw new Error(data.message || 'Order failed')
+      if (!res.ok || !data.success) throw new Error(data.message || 'The order could not be created.')
       clearCart()
-      setOrder({ ...data.data.order, phone: normalizePhone(form.phone), mpesa_sent: data.data.mpesa_sent, mpesa_message: data.data.mpesa_message })
-    } catch (err) {
-      setApiErr(err.message || 'Something went wrong. Please try again.')
+      setOrder({
+        ...data.data.order,
+        phone: normalizePhone(form.phone),
+        mpesa_sent: data.data.mpesa_sent,
+        mpesa_message: data.data.mpesa_message,
+      })
+    } catch (error) {
+      setApiError(error.message || 'Something went wrong. Please try again.')
+      window.scrollTo({ top: 0, behavior: 'smooth' })
     } finally {
-      setSub(false)
+      setSubmitting(false)
     }
   }
 
   return (
-    <div className="page-enter max-w-5xl mx-auto px-4 sm:px-6 py-8">
-
-      <div className="mb-6">
-        <h1 className="text-2xl md:text-3xl font-bold text-gray-800" style={{fontFamily:'Nunito,sans-serif'}}>Checkout</h1>
-        <div className="flex items-center gap-2 mt-3 overflow-x-auto pb-1">
-          {[
-            { step: '1', label: 'Fill details', active: true },
-            { step: '2', label: 'Receive M-Pesa prompt', active: false },
-            { step: '3', label: 'Enter PIN', active: false },
-            { step: '4', label: 'Order confirmed ✅', active: false },
-          ].map((s, i) => (
-            <div key={s.step} className="flex items-center gap-2 flex-shrink-0">
-              <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold ${
-                s.active ? 'bg-green-600 text-white' : 'bg-gray-100 text-gray-500'
-              }`} style={{fontFamily:'Nunito,sans-serif'}}>
-                <span>{s.step}</span>
-                <span>{s.label}</span>
-              </div>
-              {i < 3 && <span className="text-gray-300 text-xs">→</span>}
-            </div>
-          ))}
-        </div>
+    <div className="container-page py-8 sm:py-10">
+      <div>
+        <p className="eyebrow">Checkout</p>
+        <h1 className="mt-2 text-3xl font-semibold">Delivery and payment</h1>
       </div>
 
+      <ol className="mt-5 flex flex-wrap items-center gap-x-3 gap-y-2 text-xs" aria-label="Checkout steps">
+        {STEPS.map((step, index) => (
+          <li key={step} className="flex items-center gap-2">
+            <span className={`flex h-6 w-6 items-center justify-center rounded-full border text-[11px] font-semibold ${
+              index === 0
+                ? 'border-brand-700 bg-brand-700 text-white'
+                : 'border-line-strong text-muted'
+            }`}>
+              {index + 1}
+            </span>
+            <span className={index === 0 ? 'font-medium text-ink' : 'text-muted'}>{step}</span>
+            {index < STEPS.length - 1 && <ChevronRight className="h-3 w-3 text-line-strong" aria-hidden="true" />}
+          </li>
+        ))}
+      </ol>
+
       {(apiError || errors.cart) && (
-        <div className="flex items-center gap-3 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl mb-6 text-sm">
-          <AlertCircle className="w-4 h-4 flex-shrink-0" /> {apiError || errors.cart}
+        <div className="mt-6 flex items-start gap-3 border border-danger/30 bg-[#fdf3f2] px-4 py-3 text-sm text-danger" role="alert">
+          <AlertCircle className="mt-0.5 h-4 w-4 flex-shrink-0" aria-hidden="true" />
+          <span>{apiError || errors.cart}</span>
         </div>
       )}
 
-      <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 mb-6 flex items-start gap-3">
-        <Smartphone className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+      <div className="mt-6 flex items-start gap-3 border-l-2 border-brand-700 bg-brand-50 px-4 py-3.5">
+        <Smartphone className="mt-0.5 h-4 w-4 flex-shrink-0 text-brand-800" aria-hidden="true" />
         <div>
-          <p className="font-bold text-amber-800 text-sm" style={{fontFamily:'Nunito,sans-serif'}}>
-            Your order is only confirmed after M-Pesa payment
-          </p>
-          <p className="text-amber-700 text-xs mt-0.5 leading-relaxed">
-            Clicking &ldquo;Pay with M-Pesa&rdquo; will send a payment request to your phone. Enter your PIN within 5 minutes to confirm your order. No payment = no order.
+          <p className="text-sm font-medium text-brand-900">Your order is only confirmed after M-Pesa payment</p>
+          <p className="mt-0.5 text-[13px] leading-relaxed text-brand-800">
+            Submitting this form sends a payment request to your phone. Enter your PIN within five minutes to confirm the order.
           </p>
         </div>
       </div>
 
-      <form onSubmit={handleSubmit}>
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <form onSubmit={handleSubmit} className="mt-8">
+        <div className="grid gap-10 lg:grid-cols-[1fr_360px]">
+          <div className="space-y-8">
+            <section className="border-t border-line pt-6">
+              <h2 className="text-base font-semibold text-ink">Contact details</h2>
+              <p className="mt-1 text-[13px] text-muted">The phone number receives the M-Pesa payment request.</p>
 
-          <div className="lg:col-span-2 space-y-5">
-            <div className="bg-white rounded-2xl shadow-sm p-6">
-              <h2 className="font-bold text-gray-800 text-base mb-5 flex items-center gap-2" style={{fontFamily:'Nunito,sans-serif'}}>
-                <User className="w-4 h-4 text-green-600" /> Your Details
-              </h2>
-              <div className="space-y-4">
-                <Field label="Full Name" error={errors.fullName}>
-                  <input
-                    className={`w-full border rounded-xl px-4 py-2.5 text-gray-800 text-sm focus:outline-none focus:ring-2 focus:ring-green-400 transition-all ${errors.fullName ? 'border-red-300 bg-red-50' : 'border-gray-200'}`}
-                    placeholder="e.g. Jane Muthoni Kamau"
-                    value={form.fullName}
-                    onChange={e => { setForm({...form, fullName: e.target.value}); setErrors({...errors, fullName: ''}) }}
-                  />
-                </Field>
+              <div className="mt-5 space-y-4">
+                <Input
+                  label="Full name"
+                  value={form.fullName}
+                  onChange={(event) => setField('fullName', event.target.value)}
+                  placeholder="Jane Muthoni Kamau"
+                  autoComplete="name"
+                  error={errors.fullName}
+                />
 
-                <Field label="M-Pesa Phone Number" error={errors.phone} hint="This number will receive the payment prompt — make sure it's correct">
-                  <div className="relative">
-                    <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                    <input
-                      className={`w-full border rounded-xl pl-10 pr-4 py-2.5 text-gray-800 text-sm focus:outline-none focus:ring-2 focus:ring-green-400 transition-all ${errors.phone ? 'border-red-300 bg-red-50' : 'border-gray-200'}`}
-                      placeholder="e.g. 0712 345 678"
-                      type="tel"
-                      value={form.phone}
-                      onChange={e => { setForm({...form, phone: e.target.value}); setErrors({...errors, phone: ''}) }}
-                    />
-                  </div>
-                </Field>
+                <Input
+                  label="M-Pesa phone number"
+                  type="tel"
+                  inputMode="tel"
+                  value={form.phone}
+                  onChange={(event) => setField('phone', event.target.value)}
+                  placeholder="0712 345 678"
+                  autoComplete="tel"
+                  hint="Check this carefully. The payment prompt goes to this number."
+                  error={errors.phone}
+                />
 
-                <Field label="Email Address (optional)" error={errors.email} hint="We'll send your order confirmation here once payment is complete">
-                  <input
-                    className={`w-full border rounded-xl px-4 py-2.5 text-gray-800 text-sm focus:outline-none focus:ring-2 focus:ring-green-400 transition-all ${errors.email ? 'border-red-300 bg-red-50' : 'border-gray-200'}`}
-                    placeholder="your@email.com"
-                    type="email"
-                    value={form.email}
-                    onChange={e => { setForm({...form, email: e.target.value}); setErrors({...errors, email: ''}) }}
-                  />
-                </Field>
-
-                <Field label="Delivery Location" error={errors.location}>
-                  <div className="relative">
-                    <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                    <select
-                      className={`w-full border rounded-xl pl-10 pr-4 py-2.5 text-gray-800 text-sm focus:outline-none focus:ring-2 focus:ring-green-400 transition-all appearance-none ${errors.location ? 'border-red-300 bg-red-50' : 'border-gray-200'}`}
-                      value={form.location}
-                      onChange={e => { setForm({...form, location: e.target.value}); setErrors({...errors, location: ''}) }}
-                    >
-                      <option value="">— Select your town / area —</option>
-                      {LOCATIONS.map(l => <option key={l} value={l}>{l}</option>)}
-                    </select>
-                  </div>
-                </Field>
-
-                <Field label="Notes / Instructions (optional)">
-                  <textarea
-                    className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-gray-800 text-sm focus:outline-none focus:ring-2 focus:ring-green-400 transition-all resize-none h-20"
-                    placeholder="School name, gate number, special instructions…"
-                    value={form.notes}
-                    onChange={e => setForm({...form, notes: e.target.value})}
-                  />
-                </Field>
+                <Input
+                  label="Email address"
+                  type="email"
+                  value={form.email}
+                  onChange={(event) => setField('email', event.target.value)}
+                  placeholder="you@example.com"
+                  autoComplete="email"
+                  optional
+                  hint="Used for the order confirmation email after payment."
+                  error={errors.email}
+                />
               </div>
-            </div>
+            </section>
 
-            <div className="flex items-start gap-3 text-xs text-gray-500 px-1">
-              <Shield className="w-4 h-4 text-green-500 flex-shrink-0 mt-0.5" />
-              <p>Your phone number is only used for M-Pesa payment processing. We never store your M-Pesa PIN.</p>
+            <section className="border-t border-line pt-6">
+              <h2 className="text-base font-semibold text-ink">Delivery</h2>
+              <p className="mt-1 text-[13px] text-muted">Tell us where the order should be delivered.</p>
+
+              <div className="mt-5 space-y-4">
+                <Select
+                  label="Town or area"
+                  value={form.location}
+                  onChange={(event) => setField('location', event.target.value)}
+                  error={errors.location}
+                >
+                  <option value="">Select your town or area</option>
+                  {LOCATIONS.map((location) => <option key={location} value={location}>{location}</option>)}
+                </Select>
+
+                <Textarea
+                  label="Delivery notes"
+                  value={form.notes}
+                  onChange={(event) => setField('notes', event.target.value)}
+                  placeholder="School name, gate number or other instructions"
+                  rows={3}
+                  optional
+                />
+              </div>
+            </section>
+
+            <div className="flex items-start gap-2.5 text-xs leading-relaxed text-muted">
+              <Shield className="mt-px h-4 w-4 flex-shrink-0 text-brand-700" aria-hidden="true" />
+              <p>Your phone number is used to process the M-Pesa payment. We never ask for or store your M-Pesa PIN.</p>
             </div>
           </div>
 
-          <div>
-            <div className="bg-white rounded-2xl shadow-sm p-6 sticky top-24">
-              <h2 className="font-bold text-gray-800 mb-4" style={{fontFamily:'Nunito,sans-serif'}}>Order Summary</h2>
+          <aside>
+            <div className="border border-line bg-surface p-6 lg:sticky lg:top-24">
+              <h2 className="text-base font-semibold text-ink">Order summary</h2>
 
-              <div className="space-y-2 text-sm mb-4 max-h-52 overflow-y-auto">
-                {items.map(item => (
-                  <div key={item.id} className="flex gap-3 py-2 border-b border-gray-50 last:border-0">
-                    <div className="w-10 h-10 rounded-lg bg-gray-100 flex-shrink-0 overflow-hidden">
-                      {item.image_url
-                        ? <img src={item.image_url} alt={item.name} className="w-full h-full object-cover" />
-                        : <ShoppingBag className="w-5 h-5 text-gray-400 m-auto mt-2" />
-                      }
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-gray-700 text-xs leading-snug line-clamp-1">{item.name}</p>
-                      <p className="text-gray-400 text-xs">Qty: {item.quantity}</p>
-                    </div>
-                    <p className="text-gray-700 font-semibold text-xs flex-shrink-0">{formatKES(price(item) * item.quantity)}</p>
+              <div className="mt-4 max-h-56 space-y-2 overflow-y-auto border-b border-line pb-4">
+                {items.map((item) => (
+                  <div key={item.id} className="flex justify-between gap-3 text-sm">
+                    <span className="min-w-0 text-muted">
+                      <span className="line-clamp-2">{item.name}</span>
+                      <span className="mt-0.5 block text-xs text-muted/80">Qty {item.quantity}</span>
+                    </span>
+                    <span className="flex-shrink-0 tabular-nums text-body">{formatKES(price(item) * item.quantity)}</span>
                   </div>
                 ))}
               </div>
 
-              <div className="border-t border-gray-100 pt-3 space-y-2 text-sm">
-                <div className="flex justify-between text-gray-500">
-                  <span>Subtotal</span><span>{formatKES(total)}</span>
+              <dl className="mt-4 space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <dt className="text-muted">Subtotal</dt>
+                  <dd className="tabular-nums text-body">{formatKES(total)}</dd>
                 </div>
-                <div className="flex justify-between text-gray-500">
-                  <span>Delivery</span>
-                  <span className="text-green-600 font-semibold">FREE</span>
+                <div className="flex justify-between">
+                  <dt className="text-muted">Delivery</dt>
+                  <dd className="text-success">Free</dd>
                 </div>
+              </dl>
+
+              <div className="mt-4 flex items-baseline justify-between border-t border-line pt-4">
+                <span className="text-sm font-medium text-ink">Total</span>
+                <span className="text-xl font-semibold tabular-nums text-ink">{formatKES(total)}</span>
               </div>
 
-              <div className="border-t border-gray-100 mt-3 pt-3 flex justify-between items-center mb-5">
-                <span className="font-bold text-gray-800" style={{fontFamily:'Nunito,sans-serif'}}>Total</span>
-                <span className="font-bold text-xl text-green-600" style={{fontFamily:'Nunito,sans-serif'}}>{formatKES(total)}</span>
-              </div>
+              <Button type="submit" size="lg" loading={submitting} className="mt-5 w-full">
+                {submitting ? 'Sending M-Pesa prompt' : `Pay ${formatKES(total)} with M-Pesa`}
+              </Button>
 
-              <button
-                type="submit"
-                disabled={submitting}
-                className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-4 rounded-xl transition-colors shadow-sm hover:shadow-md flex flex-col items-center justify-center gap-1 disabled:opacity-60 active:scale-95"
-                style={{fontFamily:'Nunito,sans-serif'}}
-              >
-                {submitting ? (
-                  <>
-                    <span className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    <span className="text-sm">Sending M-Pesa prompt&hellip;</span>
-                  </>
-                ) : (
-                  <>
-                    <span className="text-base flex items-center gap-2">
-                      <Smartphone className="w-5 h-5" /> Pay {formatKES(total)} with M-Pesa
-                    </span>
-                    <span className="text-green-200 text-xs font-normal">You'll receive a prompt on your phone</span>
-                  </>
-                )}
-              </button>
-
-              <p className="text-xs text-gray-400 text-center mt-3 leading-relaxed">
-                Order is only confirmed after M-Pesa payment is completed
+              <p className="mt-3 text-center text-xs leading-relaxed text-muted">
+                You will receive a payment prompt on your phone. The order is only confirmed after payment.
               </p>
             </div>
-          </div>
+          </aside>
         </div>
       </form>
-    </div>
-  )
-}
-
-function EmptyCart() {
-  return (
-    <div className="max-w-7xl mx-auto px-4 py-20 text-center page-enter">
-      <ShoppingBag className="w-12 h-12 text-gray-200 mx-auto mb-4" />
-      <p className="text-gray-500 mb-4 font-semibold">Your cart is empty.</p>
-      <Link to="/shop" className="bg-green-600 hover:bg-green-700 text-white font-bold px-6 py-3 rounded-xl transition-colors">Browse the Shop</Link>
     </div>
   )
 }
@@ -329,85 +331,96 @@ function OrderConfirmation({ order, phone }) {
     setMessage('')
     try {
       const res = await fetch(`${API_BASE}/api/v1/payments/mpesa`, {
-        method:  'POST',
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ order_reference: order.reference, phone: order.phone || phone }),
       })
       const data = await res.json()
-      if (!res.ok || !data.success) throw new Error(data.message || 'Could not send the M-Pesa prompt')
+      if (!res.ok || !data.success) throw new Error(data.message || 'The M-Pesa prompt could not be sent.')
       setPromptSent(true)
       setMessage(data.data?.message || 'M-Pesa prompt sent.')
-    } catch (err) {
+    } catch (error) {
       setPromptSent(false)
-      setMessage(err.message || 'Could not send the M-Pesa prompt')
+      setMessage(error.message || 'The M-Pesa prompt could not be sent.')
     } finally {
       setResending(false)
     }
   }
 
   return (
-    <div className="max-w-lg mx-auto px-4 py-16 text-center page-enter">
-      <div className="bg-white rounded-2xl shadow-sm p-8">
-        <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-          <Smartphone className="w-8 h-8 text-green-600" />
-        </div>
-        <h2 className="font-bold text-2xl text-gray-800 mb-2" style={{fontFamily:'Nunito,sans-serif'}}>
-          Check Your Phone!
-        </h2>
-        <p className="text-gray-500 mb-4 text-sm leading-relaxed">
-          {promptSent
-            ? <>An M-Pesa payment request has been sent to <strong className="text-gray-800">{order.phone || phone}</strong>.</>
-            : <>We could not send the M-Pesa prompt to <strong className="text-gray-800">{order.phone || phone}</strong>.</>
-          }
-          {' '}Open your phone and enter your M-Pesa PIN to complete payment.
-        </p>
+    <div className="container-page py-10 sm:py-14">
+      <div className="mx-auto max-w-lg">
+        <div className="border border-line bg-surface p-6 sm:p-8">
+          <div className="flex h-11 w-11 items-center justify-center rounded-md border border-line bg-muted-surface">
+            <Smartphone className="h-5 w-5 text-brand-800" aria-hidden="true" />
+          </div>
 
-        <div className="bg-gray-50 rounded-xl p-4 mb-5">
-          <p className="text-xs text-gray-400 mb-1">Order Reference</p>
-          <p className="font-mono font-bold text-green-600 text-lg">{order.reference}</p>
-        </div>
+          <h1 className="mt-5 font-display text-2xl font-semibold leading-tight text-ink sm:text-[28px]">
+            {promptSent ? 'Enter your M-Pesa PIN to confirm' : 'The payment prompt was not sent'}
+          </h1>
 
-        <div className={`flex items-center justify-center gap-2 text-sm px-4 py-3 rounded-xl mb-5 ${
-          promptSent
-            ? 'bg-green-50 text-green-700 border border-green-200'
-            : 'bg-amber-50 text-amber-700 border border-amber-200'
-        }`}>
-          {promptSent
-            ? <><CheckCircle className="w-4 h-4 flex-shrink-0" /> {message || 'M-Pesa prompt sent successfully'}</>
-            : <><AlertCircle className="w-4 h-4 flex-shrink-0" /> {message || 'Payment prompt was not sent'}</>
-          }
-        </div>
+          <p className="mt-3 text-sm leading-relaxed text-muted">
+            {promptSent ? (
+              <>A payment request has been sent to <strong className="font-medium text-ink">{order.phone || phone}</strong>. Enter your PIN on your phone to complete the order.</>
+            ) : (
+              <>We could not send a payment request to <strong className="font-medium text-ink">{order.phone || phone}</strong>. Use the button below to try again.</>
+            )}
+          </p>
 
-        {!promptSent && (
-          <button
-            onClick={resendPrompt}
-            disabled={resending}
-            className="w-full mb-5 bg-amber-500 hover:bg-amber-600 text-white font-bold py-3 rounded-xl transition-colors disabled:opacity-60"
-            style={{fontFamily:'Nunito,sans-serif'}}
+          <div className="mt-5 border border-line bg-paper px-4 py-3">
+            <p className="text-[11px] font-medium text-muted">Order reference</p>
+            <p className="mt-0.5 font-mono text-base font-semibold text-ink">{order.reference}</p>
+          </div>
+
+          <div
+            className={`mt-4 flex items-start gap-2.5 border px-4 py-3 text-sm ${
+              promptSent
+                ? 'border-success/30 bg-brand-50 text-brand-900'
+                : 'border-warning/30 bg-[#fbf3e3] text-warning'
+            }`}
+            role="status"
           >
-            {resending ? 'Sending…' : 'Resend M-Pesa Prompt'}
-          </button>
-        )}
+            {promptSent
+              ? <CheckCircle className="mt-0.5 h-4 w-4 flex-shrink-0" aria-hidden="true" />
+              : <AlertCircle className="mt-0.5 h-4 w-4 flex-shrink-0" aria-hidden="true" />}
+            <span>{message || (promptSent ? 'M-Pesa prompt sent.' : 'Payment prompt was not sent.')}</span>
+          </div>
 
-        <div className="text-left bg-blue-50 rounded-xl p-4 mb-6 text-sm space-y-2">
-          <p className="font-bold text-blue-800 mb-2" style={{fontFamily:'Nunito,sans-serif'}}>After you pay:</p>
-          <p className="text-blue-700">✅ Your order will be confirmed automatically</p>
-          <p className="text-blue-700">📧 You'll receive a confirmation email</p>
-          <p className="text-blue-700">📦 We'll prepare your items for delivery</p>
-        </div>
+          {!promptSent && (
+            <Button onClick={resendPrompt} loading={resending} className="mt-4 w-full">
+              Resend M-Pesa prompt
+            </Button>
+          )}
 
-        <div className="text-xs text-gray-400 mb-6 flex items-center justify-center gap-1">
-          <Clock className="w-3.5 h-3.5" />
-          M-Pesa prompt expires in 5 minutes
-        </div>
+          <div className="mt-6 border-t border-line pt-5">
+            <p className="text-sm font-medium text-ink">After you pay</p>
+            <ul className="mt-3 space-y-2.5 text-[13px] text-muted">
+              <li className="flex items-start gap-2.5">
+                <CheckCircle className="mt-px h-4 w-4 flex-shrink-0 text-success" aria-hidden="true" />
+                Your order is confirmed automatically once payment is received.
+              </li>
+              <li className="flex items-start gap-2.5">
+                <Mail className="mt-px h-4 w-4 flex-shrink-0 text-brand-700" aria-hidden="true" />
+                If you provided an email address, a confirmation is sent to it.
+              </li>
+              <li className="flex items-start gap-2.5">
+                <Package className="mt-px h-4 w-4 flex-shrink-0 text-brand-700" aria-hidden="true" />
+                We prepare the items for delivery after payment.
+              </li>
+            </ul>
+          </div>
 
-        <div className="flex flex-col gap-3">
-          <Link to="/" className="bg-green-600 hover:bg-green-700 text-white font-bold px-6 py-3 rounded-xl transition-colors text-sm" style={{fontFamily:'Nunito,sans-serif'}}>
-            Back to Home
-          </Link>
-          <Link to="/shop" className="text-green-600 hover:text-green-800 font-semibold text-sm" style={{fontFamily:'Nunito,sans-serif'}}>
-            Continue Shopping
-          </Link>
+          <p className="mt-5 flex items-center gap-1.5 text-xs text-muted">
+            <Clock className="h-3.5 w-3.5" aria-hidden="true" />
+            The M-Pesa prompt expires after five minutes.
+          </p>
+
+          <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+            <Link to="/" className="btn-secondary flex-1">Back to home</Link>
+            <Link to="/shop" className="flex-1 text-center text-sm leading-[2.75rem] text-brand-800 hover:underline">
+              Continue shopping
+            </Link>
+          </div>
         </div>
       </div>
     </div>

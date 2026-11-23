@@ -1,14 +1,14 @@
 export function Table({ children, className = '' }) {
   return (
-    <div className={`overflow-x-auto rounded-xl border border-white/10 ${className}`}>
-      <table className="w-full text-sm">{children}</table>
+    <div className={`overflow-x-auto rounded-md border border-line bg-surface ${className}`}>
+      <table className="w-full min-w-[680px] text-sm">{children}</table>
     </div>
   )
 }
 
 export function Th({ children, className = '' }) {
   return (
-    <th className={`px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider bg-gray-900/80 ${className}`}>
+    <th className={`border-b border-line bg-paper px-4 py-2.5 text-left text-[11px] font-medium uppercase tracking-[0.06em] text-muted ${className}`}>
       {children}
     </th>
   )
@@ -16,17 +16,26 @@ export function Th({ children, className = '' }) {
 
 export function Td({ children, className = '' }) {
   return (
-    <td className={`px-4 py-3 text-gray-300 border-t border-white/5 ${className}`}>
+    <td className={`border-b border-line px-4 py-3 align-middle text-[13px] text-body ${className}`}>
       {children}
     </td>
   )
 }
 
 export function Tr({ children, onClick, className = '' }) {
+  const interactive = Boolean(onClick)
+
   return (
     <tr
       onClick={onClick}
-      className={`bg-gray-900 transition-colors ${onClick ? 'cursor-pointer hover:bg-gray-800/60' : ''} ${className}`}
+      onKeyDown={interactive ? (event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault()
+          onClick(event)
+        }
+      } : undefined}
+      tabIndex={interactive ? 0 : undefined}
+      className={`transition-colors ${interactive ? 'cursor-pointer hover:bg-paper focus-visible:bg-paper' : ''} ${className}`}
     >
       {children}
     </tr>
